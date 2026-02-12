@@ -1,0 +1,9 @@
+# Phase 1: Vision & Tracking
+opencv-python>=4.8.0
+numpy>=1.24.0
+filterpy>=1.4.5        # Kalman filters
+imutils>=0.5.4         # convenience functions for OpenCV
+
+# Phase 3+: Control (uncomment when needed)
+# pyserial>=3.5         # serial communication with Arduino
+# simple-pid>=2.0.0     # PID controller library
