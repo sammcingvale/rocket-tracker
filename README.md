@@ -57,6 +57,10 @@ python experiments/track-color.py
 ## Wiring Diagrams
 ![Hardware Wiring Diagram](hardware/phase2_wiring_diagram.svg)
 
+- **Wiring connections** — every wire is color-coded to match real servo wiring conventions (red = power, brown = ground, orange = signal). The critical common ground connection between the Arduino and servo power bus is highlighted in purple dashes.
+- **Physical assembly** — the right side shows how the pan/tilt bracket goes together: pan servo in the base for horizontal rotation, tilt servo on the vertical arm, with the camera and (eventually) laser mounted on top.
+- **Signal flow** — the bottom-right traces the full data path: camera → OpenCV detection → Kalman filter → PID controller → serial to Arduino → PWM to servos.
+
 ## Engineering Notebook
 
 See [`Rocket Tracker Notion`](https://www.notion.so/Model-Rocket-Tracker-3057645ef4b0804eb3d3d9b7e91a4bc6?showMoveTo=true&saveParent=true) for ongoing notes, decisions, and lessons learned.
