@@ -51,8 +51,11 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run the first tracking demo
-python vision/track_color.py
+python experiments/track-color.py
 ```
+
+## Wiring Diagrams
+![Hardware Wiring Diagram](hardware/phase2_wiring_diagram.svg)
 
 ## Engineering Notebook
 

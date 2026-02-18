@@ -1,0 +1,397 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 820" font-family="'Courier New', monospace">
+  <defs>
+    <!-- Arrowhead markers -->
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#6b7280"/>
+    </marker>
+    <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#ef4444"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#22c55e"/>
+    </marker>
+
+    <!-- Background pattern for components -->
+    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1e293b" stroke-width="0.3"/>
+    </pattern>
+
+    <!-- Glow filter for power -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1100" height="820" fill="#0f172a" rx="8"/>
+  <rect width="1100" height="820" fill="url(#grid)" rx="8"/>
+
+  <!-- Title -->
+  <text x="550" y="36" text-anchor="middle" fill="#38bdf8" font-size="18" font-weight="bold">ROCKET TRACKER — HARDWARE WIRING DIAGRAM (Phase 2)</text>
+  <text x="550" y="56" text-anchor="middle" fill="#64748b" font-size="11">All connections shown with wire colors matching standard servo wiring conventions</text>
+
+  <!-- ============================================================ -->
+  <!-- LEGEND -->
+  <!-- ============================================================ -->
+  <rect x="20" y="72" width="280" height="130" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="32" y="92" fill="#94a3b8" font-size="11" font-weight="bold">WIRE COLOR LEGEND</text>
+
+  <line x1="32" y1="110" x2="62" y2="110" stroke="#ef4444" stroke-width="3"/>
+  <text x="70" y="114" fill="#cbd5e1" font-size="10">Red — +V Power (5-6V)</text>
+
+  <line x1="32" y1="130" x2="62" y2="130" stroke="#1e1b0e" stroke-width="3"/>
+  <rect x="32" y="128" width="30" height="4" fill="#92400e" rx="1"/>
+  <text x="70" y="134" fill="#cbd5e1" font-size="10">Brown/Black — Ground (GND)</text>
+
+  <line x1="32" y1="150" x2="62" y2="150" stroke="#f59e0b" stroke-width="3"/>
+  <text x="70" y="154" fill="#cbd5e1" font-size="10">Orange/Yellow — Signal (PWM)</text>
+
+  <line x1="32" y1="170" x2="62" y2="170" stroke="#60a5fa" stroke-width="3"/>
+  <text x="70" y="174" fill="#cbd5e1" font-size="10">Blue — USB Data</text>
+
+  <line x1="32" y1="190" x2="62" y2="190" stroke="#a78bfa" stroke-width="3" stroke-dasharray="6,3"/>
+  <text x="70" y="194" fill="#cbd5e1" font-size="10">Purple dashed — Common Ground link</text>
+
+  <!-- ============================================================ -->
+  <!-- POWER SUPPLY (6V 2A) -->
+  <!-- ============================================================ -->
+  <rect x="40" y="280" width="180" height="120" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5"/>
+  <rect x="40" y="280" width="180" height="24" rx="8" fill="#7f1d1d"/>
+  <rect x="40" y="296" width="180" height="8" fill="#1e293b"/>
+  <text x="130" y="296" text-anchor="middle" fill="#fca5a5" font-size="11" font-weight="bold">6V 2A POWER SUPPLY</text>
+
+  <!-- Barrel jack icon -->
+  <circle cx="130" cy="340" r="16" fill="none" stroke="#64748b" stroke-width="1.5"/>
+  <circle cx="130" cy="340" r="6" fill="#64748b"/>
+  <text x="130" y="374" text-anchor="middle" fill="#94a3b8" font-size="9">DC Barrel Jack</text>
+  <text x="130" y="386" text-anchor="middle" fill="#64748b" font-size="8">(cut wire &amp; strip,</text>
+  <text x="130" y="396" text-anchor="middle" fill="#64748b" font-size="8">or use breakout board)</text>
+
+  <!-- Power output labels -->
+  <circle cx="230" cy="320" r="4" fill="#ef4444"/>
+  <text x="222" y="312" fill="#fca5a5" font-size="8" text-anchor="end">+6V</text>
+  <circle cx="230" cy="360" r="4" fill="#92400e"/>
+  <text x="222" y="352" fill="#d6a87c" font-size="8" text-anchor="end">GND</text>
+
+  <!-- ============================================================ -->
+  <!-- SERVO POWER BUS (breadboard/terminal block) -->
+  <!-- ============================================================ -->
+  <rect x="310" y="260" width="200" height="160" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5"/>
+  <rect x="310" y="260" width="200" height="24" rx="8" fill="#1e3a5f"/>
+  <rect x="310" y="276" width="200" height="8" fill="#1e293b"/>
+  <text x="410" y="278" text-anchor="middle" fill="#7dd3fc" font-size="11" font-weight="bold">SERVO POWER BUS</text>
+  <text x="410" y="296" text-anchor="middle" fill="#64748b" font-size="9">(breadboard or terminal block)</text>
+
+  <!-- Power rails -->
+  <line x1="330" y1="320" x2="490" y2="320" stroke="#ef4444" stroke-width="3"/>
+  <text x="334" y="316" fill="#fca5a5" font-size="8">+6V RAIL</text>
+  <line x1="330" y1="380" x2="490" y2="380" stroke="#92400e" stroke-width="3"/>
+  <text x="334" y="376" fill="#d6a87c" font-size="8">GND RAIL</text>
+
+  <!-- Connection dots on power bus -->
+  <circle cx="380" cy="320" r="3" fill="#ef4444"/>
+  <circle cx="420" cy="320" r="3" fill="#ef4444"/>
+  <circle cx="460" cy="320" r="3" fill="#ef4444"/>
+  <circle cx="380" cy="380" r="3" fill="#92400e"/>
+  <circle cx="420" cy="380" r="3" fill="#92400e"/>
+  <circle cx="460" cy="380" r="3" fill="#92400e"/>
+
+  <!-- Wire: PSU +V to bus -->
+  <path d="M234,320 L326,320" stroke="#ef4444" stroke-width="2.5" fill="none"/>
+
+  <!-- Wire: PSU GND to bus -->
+  <path d="M234,360 L280,360 L280,380 L326,380" stroke="#92400e" stroke-width="2.5" fill="none"/>
+
+  <!-- ============================================================ -->
+  <!-- PAN SERVO (MG995) -->
+  <!-- ============================================================ -->
+  <rect x="580" y="230" width="200" height="130" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="580" y="230" width="200" height="24" rx="8" fill="#78350f"/>
+  <rect x="580" y="246" width="200" height="8" fill="#1e293b"/>
+  <text x="680" y="248" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">PAN SERVO (MG995)</text>
+  <text x="680" y="266" text-anchor="middle" fill="#64748b" font-size="9">Horizontal rotation (~180°)</text>
+
+  <!-- Servo body illustration -->
+  <rect x="640" y="280" width="80" height="44" rx="4" fill="#334155" stroke="#475569" stroke-width="1"/>
+  <circle cx="700" cy="302" r="10" fill="#475569" stroke="#64748b" stroke-width="1"/>
+  <circle cx="700" cy="302" r="3" fill="#94a3b8"/>
+  <text x="680" y="342" text-anchor="middle" fill="#64748b" font-size="8">servo horn →</text>
+  <text x="700" y="352" fill="#64748b" font-size="7">↑ output shaft</text>
+
+  <!-- Servo wire pigtail labels -->
+  <circle cx="576" cy="275" r="4" fill="#ef4444"/>
+  <text x="570" y="271" fill="#fca5a5" font-size="8" text-anchor="end">+V (red)</text>
+  <circle cx="576" cy="302" r="4" fill="#92400e"/>
+  <text x="570" y="298" fill="#d6a87c" font-size="8" text-anchor="end">GND (brown)</text>
+  <circle cx="576" cy="329" r="4" fill="#f59e0b"/>
+  <text x="570" y="325" fill="#fbbf24" font-size="8" text-anchor="end">SIG (orange)</text>
+
+  <!-- Wire: Bus +V to Pan Servo -->
+  <path d="M460,320 L540,320 L540,275 L572,275" stroke="#ef4444" stroke-width="2" fill="none"/>
+
+  <!-- Wire: Bus GND to Pan Servo -->
+  <path d="M460,380 L530,380 L530,302 L572,302" stroke="#92400e" stroke-width="2" fill="none"/>
+
+  <!-- ============================================================ -->
+  <!-- TILT SERVO (MG995) -->
+  <!-- ============================================================ -->
+  <rect x="580" y="400" width="200" height="130" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+  <rect x="580" y="400" width="200" height="24" rx="8" fill="#78350f"/>
+  <rect x="580" y="416" width="200" height="8" fill="#1e293b"/>
+  <text x="680" y="418" text-anchor="middle" fill="#fbbf24" font-size="11" font-weight="bold">TILT SERVO (MG995)</text>
+  <text x="680" y="436" text-anchor="middle" fill="#64748b" font-size="9">Vertical rotation (~180°)</text>
+
+  <!-- Servo body -->
+  <rect x="640" y="450" width="80" height="44" rx="4" fill="#334155" stroke="#475569" stroke-width="1"/>
+  <circle cx="700" cy="472" r="10" fill="#475569" stroke="#64748b" stroke-width="1"/>
+  <circle cx="700" cy="472" r="3" fill="#94a3b8"/>
+  <text x="680" y="512" text-anchor="middle" fill="#64748b" font-size="8">servo horn →</text>
+  <text x="700" y="522" fill="#64748b" font-size="7">↑ output shaft</text>
+
+  <!-- Servo wire pigtail labels -->
+  <circle cx="576" cy="445" r="4" fill="#ef4444"/>
+  <text x="570" y="441" fill="#fca5a5" font-size="8" text-anchor="end">+V (red)</text>
+  <circle cx="576" cy="472" r="4" fill="#92400e"/>
+  <text x="570" y="468" fill="#d6a87c" font-size="8" text-anchor="end">GND (brown)</text>
+  <circle cx="576" cy="499" r="4" fill="#f59e0b"/>
+  <text x="570" y="495" fill="#fbbf24" font-size="8" text-anchor="end">SIG (orange)</text>
+
+  <!-- Wire: Bus +V to Tilt Servo -->
+  <path d="M420,320 L420,335 L550,335 L550,445 L572,445" stroke="#ef4444" stroke-width="2" fill="none"/>
+
+  <!-- Wire: Bus GND to Tilt Servo -->
+  <path d="M420,380 L420,395 L540,395 L540,472 L572,472" stroke="#92400e" stroke-width="2" fill="none"/>
+
+  <!-- ============================================================ -->
+  <!-- ARDUINO UNO R4 WIFI -->
+  <!-- ============================================================ -->
+  <rect x="310" y="530" width="300" height="210" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="2"/>
+  <rect x="310" y="530" width="300" height="28" rx="8" fill="#0c4a6e"/>
+  <rect x="310" y="550" width="300" height="8" fill="#1e293b"/>
+  <text x="460" y="550" text-anchor="middle" fill="#38bdf8" font-size="12" font-weight="bold">ARDUINO UNO R4 WiFi</text>
+
+  <!-- Board illustration -->
+  <rect x="330" y="575" width="260" height="145" rx="4" fill="#0f2942" stroke="#1e4976" stroke-width="1"/>
+
+  <!-- USB-C port -->
+  <rect x="320" y="610" width="20" height="12" rx="3" fill="#475569" stroke="#64748b" stroke-width="1"/>
+  <text x="310" y="612" fill="#94a3b8" font-size="7" text-anchor="end">USB-C</text>
+
+  <!-- Pin headers - digital side -->
+  <text x="345" y="592" fill="#7dd3fc" font-size="7" font-weight="bold">DIGITAL PINS</text>
+  <!-- Pin D9 -->
+  <rect x="420" y="596" width="26" height="14" rx="2" fill="#1e3a5f" stroke="#38bdf8" stroke-width="0.8"/>
+  <text x="433" y="606" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="bold">D9</text>
+  <!-- Pin D10 -->
+  <rect x="452" y="596" width="26" height="14" rx="2" fill="#1e3a5f" stroke="#38bdf8" stroke-width="0.8"/>
+  <text x="465" y="606" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="bold">D10</text>
+
+  <!-- Pin header - power side -->
+  <text x="345" y="640" fill="#7dd3fc" font-size="7" font-weight="bold">POWER PINS</text>
+  <rect x="420" y="644" width="26" height="14" rx="2" fill="#1e3a5f" stroke="#38bdf8" stroke-width="0.8"/>
+  <text x="433" y="654" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="bold">5V</text>
+  <rect x="452" y="644" width="26" height="14" rx="2" fill="#1e3a5f" stroke="#38bdf8" stroke-width="0.8"/>
+  <text x="465" y="654" text-anchor="middle" fill="#7dd3fc" font-size="8" font-weight="bold">GND</text>
+
+  <!-- Pin labels with purpose -->
+  <text x="433" y="575" fill="#fbbf24" font-size="7" text-anchor="middle">Pan PWM</text>
+  <text x="465" y="575" fill="#fbbf24" font-size="7" text-anchor="middle">Tilt PWM</text>
+
+  <!-- Status LED -->
+  <circle cx="570" cy="600" r="4" fill="#22c55e" filter="url(#glow)"/>
+  <text x="570" y="614" text-anchor="middle" fill="#64748b" font-size="7">PWR</text>
+
+  <!-- Chip -->
+  <rect x="490" y="650" width="60" height="40" rx="2" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="520" y="667" text-anchor="middle" fill="#475569" font-size="6">RA4M1</text>
+  <text x="520" y="678" text-anchor="middle" fill="#475569" font-size="6">+ ESP32-S3</text>
+
+  <!-- WiFi antenna hint -->
+  <text x="570" y="710" text-anchor="middle" fill="#475569" font-size="7">WiFi/BT</text>
+  <path d="M560,694 Q570,684 580,694" fill="none" stroke="#475569" stroke-width="0.8"/>
+  <path d="M564,694 Q570,688 576,694" fill="none" stroke="#475569" stroke-width="0.8"/>
+
+  <!-- ============================================================ -->
+  <!-- SIGNAL WIRES: Arduino to Servos -->
+  <!-- ============================================================ -->
+
+  <!-- Pan signal: D9 to Pan Servo -->
+  <path d="M433,596 L433,570 L560,570 L560,329 L576,329" stroke="#f59e0b" stroke-width="2" fill="none"/>
+  <text x="564" y="562" fill="#fbbf24" font-size="7" transform="rotate(-90,564,562)">PWM signal (D9)</text>
+
+  <!-- Tilt signal: D10 to Tilt Servo -->
+  <path d="M465,596 L465,560 L550,560 L550,499 L576,499" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="6,2"/>
+  <text x="554" y="536" fill="#fbbf24" font-size="7" transform="rotate(-90,554,536)">PWM signal (D10)</text>
+
+  <!-- ============================================================ -->
+  <!-- COMMON GROUND WIRE (critical!) -->
+  <!-- ============================================================ -->
+  <path d="M465,658 L465,670 L290,670 L290,380 L326,380" stroke="#a78bfa" stroke-width="2.5" fill="none" stroke-dasharray="8,4"/>
+
+  <!-- Common ground label -->
+  <rect x="225" y="450" width="120" height="50" rx="6" fill="#2e1065" stroke="#7c3aed" stroke-width="1"/>
+  <text x="285" y="466" text-anchor="middle" fill="#c4b5fd" font-size="9" font-weight="bold">⚡ COMMON GROUND</text>
+  <text x="285" y="480" text-anchor="middle" fill="#a78bfa" font-size="7">Arduino GND → Bus GND</text>
+  <text x="285" y="492" text-anchor="middle" fill="#7c3aed" font-size="7">REQUIRED for signals!</text>
+
+  <!-- Arrow from label to wire -->
+  <line x1="285" y1="500" x2="290" y2="530" stroke="#7c3aed" stroke-width="0.8" stroke-dasharray="2,2"/>
+
+  <!-- ============================================================ -->
+  <!-- LAPTOP -->
+  <!-- ============================================================ -->
+  <rect x="40" y="560" width="200" height="130" rx="8" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5"/>
+  <rect x="40" y="560" width="200" height="24" rx="8" fill="#1e3a5f"/>
+  <rect x="40" y="576" width="200" height="8" fill="#1e293b"/>
+  <text x="140" y="578" text-anchor="middle" fill="#60a5fa" font-size="11" font-weight="bold">💻 LAPTOP (MacBook)</text>
+
+  <!-- Screen -->
+  <rect x="65" y="598" width="150" height="75" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+  <text x="140" y="622" text-anchor="middle" fill="#475569" font-size="8">Running Python</text>
+  <text x="140" y="634" text-anchor="middle" fill="#475569" font-size="8">OpenCV + tracking</text>
+  <text x="140" y="646" text-anchor="middle" fill="#475569" font-size="8">+ serial to Arduino</text>
+  <text x="140" y="658" text-anchor="middle" fill="#38bdf8" font-size="7">track_kalman.py</text>
+
+  <!-- USB to Arduino -->
+  <path d="M240,616 L306,616" stroke="#60a5fa" stroke-width="2.5" fill="none"/>
+  <text x="273" y="610" text-anchor="middle" fill="#93c5fd" font-size="7">USB-C</text>
+  <text x="273" y="630" text-anchor="middle" fill="#64748b" font-size="7">Serial data</text>
+  <text x="273" y="640" text-anchor="middle" fill="#64748b" font-size="7">+ Arduino power</text>
+
+  <!-- ============================================================ -->
+  <!-- WEBCAM -->
+  <!-- ============================================================ -->
+  <rect x="40" y="440" width="160" height="90" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1.5"/>
+  <rect x="40" y="440" width="160" height="24" rx="8" fill="#14532d"/>
+  <rect x="40" y="456" width="160" height="8" fill="#1e293b"/>
+  <text x="120" y="458" text-anchor="middle" fill="#4ade80" font-size="11" font-weight="bold">📷 WEBCAM</text>
+  <text x="120" y="476" text-anchor="middle" fill="#64748b" font-size="9">Logitech C920 / C270</text>
+
+  <!-- Camera lens -->
+  <circle cx="120" cy="503" r="12" fill="#334155" stroke="#475569" stroke-width="1.5"/>
+  <circle cx="120" cy="503" r="6" fill="#1e293b" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="120" cy="503" r="2" fill="#475569"/>
+
+  <!-- USB to Laptop -->
+  <path d="M120,530 L120,575 L140,575 L140,594" stroke="#60a5fa" stroke-width="2" fill="none"/>
+  <text x="105" y="548" fill="#93c5fd" font-size="7">USB</text>
+
+  <!-- ============================================================ -->
+  <!-- PAN/TILT BRACKET ASSEMBLY -->
+  <!-- ============================================================ -->
+  <rect x="820" y="260" width="250" height="310" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="1.5"/>
+  <rect x="820" y="260" width="250" height="24" rx="8" fill="#334155"/>
+  <rect x="820" y="276" width="250" height="8" fill="#1e293b"/>
+  <text x="945" y="278" text-anchor="middle" fill="#e2e8f0" font-size="11" font-weight="bold">PAN/TILT ASSEMBLY</text>
+  <text x="945" y="296" text-anchor="middle" fill="#64748b" font-size="9">(Bolsen aluminum bracket kit)</text>
+
+  <!-- Base/Pan platform -->
+  <rect x="870" y="470" width="150" height="20" rx="3" fill="#475569" stroke="#64748b" stroke-width="1"/>
+  <text x="945" y="484" text-anchor="middle" fill="#94a3b8" font-size="8">BASE PLATE</text>
+  <text x="945" y="500" text-anchor="middle" fill="#64748b" font-size="7">↕ bolted to surface</text>
+
+  <!-- Pan servo in base -->
+  <rect x="910" y="430" width="70" height="35" rx="3" fill="#78350f" stroke="#f59e0b" stroke-width="1"/>
+  <text x="945" y="452" text-anchor="middle" fill="#fbbf24" font-size="8">PAN servo</text>
+
+  <!-- Vertical bracket -->
+  <rect x="940" y="340" width="10" height="90" fill="#475569" stroke="#64748b" stroke-width="0.8"/>
+
+  <!-- Tilt servo on vertical bracket -->
+  <rect x="910" y="330" width="70" height="30" rx="3" fill="#78350f" stroke="#f59e0b" stroke-width="1"/>
+  <text x="945" y="349" text-anchor="middle" fill="#fbbf24" font-size="8">TILT servo</text>
+
+  <!-- Camera + Laser platform -->
+  <rect x="880" y="310" width="130" height="16" rx="2" fill="#475569" stroke="#64748b" stroke-width="0.8"/>
+
+  <!-- Camera on platform -->
+  <rect x="885" y="295" width="50" height="16" rx="3" fill="#14532d" stroke="#22c55e" stroke-width="0.8"/>
+  <text x="910" y="306" text-anchor="middle" fill="#4ade80" font-size="7">CAM</text>
+
+  <!-- Laser on platform -->
+  <rect x="945" y="295" width="55" height="16" rx="3" fill="#7f1d1d" stroke="#ef4444" stroke-width="0.8"/>
+  <text x="972" y="306" text-anchor="middle" fill="#fca5a5" font-size="7">LASER</text>
+  <text x="972" y="290" text-anchor="middle" fill="#64748b" font-size="6">(Phase 4)</text>
+
+  <!-- Assembly arrows -->
+  <path d="M780,275 L816,275" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+  <path d="M780,445 L816,445" stroke="#64748b" stroke-width="1" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Pan servo connection to assembly -->
+  <text x="808" y="268" fill="#64748b" font-size="7" text-anchor="end">Pan servo</text>
+  <text x="808" y="278" fill="#64748b" font-size="7" text-anchor="end">mounts in base</text>
+
+  <text x="808" y="438" fill="#64748b" font-size="7" text-anchor="end">Tilt servo mounts</text>
+  <text x="808" y="448" fill="#64748b" font-size="7" text-anchor="end">on vertical arm</text>
+
+  <!-- Rotation arrows -->
+  <path d="M895,460 A20,10 0 0,1 935,460" fill="none" stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="918" y="516" text-anchor="middle" fill="#fbbf24" font-size="7">↔ PAN axis</text>
+
+  <path d="M860,340 Q855,350 860,360" fill="none" stroke="#fbbf24" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="855" y="355" text-anchor="end" fill="#fbbf24" font-size="7">↕ TILT</text>
+
+  <!-- ============================================================ -->
+  <!-- DATA FLOW DIAGRAM -->
+  <!-- ============================================================ -->
+  <rect x="680" y="600" width="390" height="190" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+  <text x="875" y="620" text-anchor="middle" fill="#94a3b8" font-size="11" font-weight="bold">SIGNAL FLOW</text>
+
+  <!-- Flow boxes -->
+  <rect x="700" y="636" width="80" height="32" rx="4" fill="#14532d" stroke="#22c55e" stroke-width="1"/>
+  <text x="740" y="656" text-anchor="middle" fill="#4ade80" font-size="8">CAMERA</text>
+
+  <rect x="805" y="636" width="80" height="32" rx="4" fill="#1e3a5f" stroke="#38bdf8" stroke-width="1"/>
+  <text x="845" y="650" text-anchor="middle" fill="#7dd3fc" font-size="8">OpenCV</text>
+  <text x="845" y="660" text-anchor="middle" fill="#7dd3fc" font-size="7">detect+track</text>
+
+  <rect x="910" y="636" width="80" height="32" rx="4" fill="#1e3a5f" stroke="#38bdf8" stroke-width="1"/>
+  <text x="950" y="650" text-anchor="middle" fill="#7dd3fc" font-size="8">Kalman</text>
+  <text x="950" y="660" text-anchor="middle" fill="#7dd3fc" font-size="7">filter</text>
+
+  <rect x="1010" y="636" width="50" height="32" rx="4" fill="#1e3a5f" stroke="#38bdf8" stroke-width="1"/>
+  <text x="1035" y="656" text-anchor="middle" fill="#7dd3fc" font-size="8">PID</text>
+
+  <!-- Second row -->
+  <rect x="700" y="700" width="80" height="32" rx="4" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1"/>
+  <text x="740" y="714" text-anchor="middle" fill="#7dd3fc" font-size="7">Serial USB</text>
+  <text x="740" y="724" text-anchor="middle" fill="#7dd3fc" font-size="7">(angles)</text>
+
+  <rect x="805" y="700" width="80" height="32" rx="4" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1"/>
+  <text x="845" y="714" text-anchor="middle" fill="#7dd3fc" font-size="7">Arduino</text>
+  <text x="845" y="724" text-anchor="middle" fill="#7dd3fc" font-size="7">firmware</text>
+
+  <rect x="910" y="700" width="80" height="32" rx="4" fill="#78350f" stroke="#f59e0b" stroke-width="1"/>
+  <text x="950" y="714" text-anchor="middle" fill="#fbbf24" font-size="7">PWM</text>
+  <text x="950" y="724" text-anchor="middle" fill="#fbbf24" font-size="7">signal</text>
+
+  <rect x="1010" y="700" width="50" height="32" rx="4" fill="#78350f" stroke="#f59e0b" stroke-width="1"/>
+  <text x="1035" y="720" text-anchor="middle" fill="#fbbf24" font-size="8">SERVO</text>
+
+  <!-- Flow arrows -->
+  <path d="M780,652 L801,652" stroke="#4ade80" stroke-width="1.5" fill="none" marker-end="url(#arrowGreen)"/>
+  <path d="M885,652 L906,652" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+  <path d="M990,652 L1006,652" stroke="#38bdf8" stroke-width="1.5" fill="none"/>
+  <path d="M1035,668 L1035,696" stroke="#64748b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1006,716 L994,716" stroke="#f59e0b" stroke-width="1.5" fill="none"/>
+  <path d="M910,716 L889,716" stroke="#64748b" stroke-width="1.5" fill="none"/>
+  <path d="M805,716 L784,716" stroke="#60a5fa" stroke-width="1.5" fill="none"/>
+
+  <!-- Laptop bracket -->
+  <rect x="695" y="752" width="170" height="18" rx="3" fill="none" stroke="#334155" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <text x="780" y="764" text-anchor="middle" fill="#475569" font-size="7">↑ runs on LAPTOP ↑</text>
+  <rect x="800" y="752" width="170" height="18" rx="3" fill="none" stroke="#334155" stroke-width="0.8" stroke-dasharray="3,3"/>
+  <text x="930" y="764" text-anchor="middle" fill="#475569" font-size="7">↑ runs on ARDUINO ↑</text>
+
+  <!-- ============================================================ -->
+  <!-- WARNING CALLOUTS -->
+  <!-- ============================================================ -->
+  <rect x="40" y="720" width="240" height="80" rx="6" fill="#431407" stroke="#ea580c" stroke-width="1"/>
+  <text x="52" y="738" fill="#fb923c" font-size="10" font-weight="bold">⚠️  IMPORTANT NOTES</text>
+  <text x="52" y="754" fill="#fed7aa" font-size="8">• Do NOT power servos from Arduino 5V pin</text>
+  <text x="52" y="768" fill="#fed7aa" font-size="8">• Always connect common ground</text>
+  <text x="52" y="782" fill="#fed7aa" font-size="8">• Connect power supply LAST</text>
+  <text x="52" y="796" fill="#fed7aa" font-size="8">• Use pins 9 &amp; 10 (hardware PWM timers)</text>
+
+</svg>
