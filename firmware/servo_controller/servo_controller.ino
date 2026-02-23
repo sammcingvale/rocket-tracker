@@ -94,6 +94,10 @@ int sweepTiltDir = 1;
 // ─── SETUP ──────────────────────────────────────────────────────
 void setup() {
   Serial.begin(BAUD_RATE);
+  while (!Serial) {
+    ; // Wait for USB serial port to connect (needed on UNO R4 WiFi)
+  }
+  delay(200); // Extra settle time
 
   panServo.attach(PAN_PIN);
   tiltServo.attach(TILT_PIN);
