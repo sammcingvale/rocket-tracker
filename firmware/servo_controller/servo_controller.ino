@@ -94,8 +94,12 @@ int sweepTiltDir = 1;
 // ─── SETUP ──────────────────────────────────────────────────────
 void setup() {
   Serial.begin(BAUD_RATE);
-  while (!Serial) {
-    ; // Wait for USB serial port to connect (needed on UNO R4 WiFi)
+  // Wait up to 3 seconds for USB serial to connect.
+  // Arduino IDE Serial Monitor triggers this quickly;
+  // pyserial may not, so we use a timeout to avoid hanging.
+  unsigned long serialWaitStart = millis();
+  while (!Serial && (millis() - serialWaitStart < 3000)) {
+    ; // wait
   }
   delay(200); // Extra settle time
 

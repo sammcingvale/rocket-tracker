@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalman Filter Deep Dive</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0c0e13;
+    --surface: #14171e;
+    --surface2: #1a1e28;
+    --border: #2a2f3d;
+    --text: #d4d8e3;
+    --text-dim: #6b7280;
+    --accent: #4fd1c5;
+    --yellow: #fbbf24;
+    --green: #6ee7b7;
+    --red: #f87171;
+    --blue: #60a5fa;
+    --orange: #fb923c;
+    --purple: #a78bfa;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.92em;
+    margin-bottom: 40px;
+    font-style: italic;
+  }
+
+  /* --- Section --- */
+  .section {
+    margin-bottom: 48px;
+  }
+
+  .section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05em;
+    font-weight: 500;
+    color: #e2e6f0;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-title .tag {
+    font-size: 0.7em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+
+  .tag-predict { background: rgba(251,191,36,0.15); color: var(--yellow); border: 1px solid rgba(251,191,36,0.3); }
+  .tag-update { background: rgba(110,231,183,0.15); color: var(--green); border: 1px solid rgba(110,231,183,0.3); }
+  .tag-concept { background: rgba(167,139,250,0.15); color: var(--purple); border: 1px solid rgba(167,139,250,0.3); }
+
+  .desc {
+    color: var(--text-dim);
+    font-size: 0.9em;
+    margin-bottom: 20px;
+    max-width: 750px;
+    line-height: 1.75;
+  }
+
+  .desc strong { color: var(--text); }
+
+  /* --- Panels --- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(79,209,197,0.2), transparent);
+  }
+
+  /* --- Interactive sim --- */
+  .sim-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  @media (max-width: 800px) {
+    .sim-layout { grid-template-columns: 1fr; }
+  }
+
+  canvas {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: crosshair;
+    display: block;
+  }
+
+  .sim-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .state-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+
+  .state-box-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+
+  .state-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78em;
+    padding: 3px 0;
+  }
+
+  .state-label { color: var(--text-dim); }
+  .state-val { font-weight: 600; }
+
+  .val-yellow { color: var(--yellow); }
+  .val-green { color: var(--green); }
+  .val-orange { color: var(--orange); }
+  .val-purple { color: var(--purple); }
+  .val-blue { color: var(--blue); }
+  .val-accent { color: var(--accent); }
+
+  /* --- Controls --- */
+  .controls-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75em;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: rgba(79,209,197,0.12); border-color: var(--accent); color: var(--accent); }
+
+  .btn-predict { border-color: rgba(251,191,36,0.4); color: var(--yellow); }
+  .btn-predict:hover { background: rgba(251,191,36,0.1); border-color: var(--yellow); }
+
+  .btn-update { border-color: rgba(110,231,183,0.4); color: var(--green); }
+  .btn-update:hover { background: rgba(110,231,183,0.1); border-color: var(--green); }
+
+  /* --- Equation display --- */
+  .equation-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8em;
+    line-height: 2;
+    overflow-x: auto;
+  }
+
+  .eq-line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    min-height: 28px;
+  }
+
+  .eq-comment {
+    color: var(--text-dim);
+    font-size: 0.85em;
+    font-style: italic;
+  }
+
+  /* --- Analogy panel --- */
+  .analogy {
+    display: grid;
+    grid-template-columns: 60px 1fr;
+    gap: 16px;
+    align-items: start;
+    padding: 16px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .analogy-icon {
+    font-size: 2em;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .analogy-text {
+    font-size: 0.88em;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .analogy-text strong { color: var(--text); }
+
+  /* --- Step indicator --- */
+  .step-indicator {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+
+  .step-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s;
+  }
+
+  .step-dot.active { background: var(--accent); box-shadow: 0 0 8px rgba(79,209,197,0.5); }
+  .step-dot.predict-active { background: var(--yellow); box-shadow: 0 0 8px rgba(251,191,36,0.5); }
+  .step-dot.update-active { background: var(--green); box-shadow: 0 0 8px rgba(110,231,183,0.5); }
+
+  /* --- Log --- */
+  .log-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    max-height: 140px;
+    overflow-y: auto;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7em;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+
+  .log-box .log-predict { color: var(--yellow); }
+  .log-box .log-update { color: var(--green); }
+  .log-box .log-info { color: var(--accent); }
+
+  /* --- Noise sliders --- */
+  .slider-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .slider-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72em;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .slider-label .slider-val { color: var(--accent); font-weight: 600; }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+
+  .callout {
+    margin-top: 20px;
+    padding: 16px 20px;
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    font-size: 0.88em;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .callout strong { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>The Kalman Filter, Step by Step</h1>
+  <p class="subtitle">An interactive deep-dive into how prediction and correction work together</p>
+
+  <!-- ======== SECTION: The Core Idea ======== -->
+  <div class="section">
+    <div class="section-title">
+      The Core Idea
+      <span class="tag tag-concept">CONCEPT</span>
+    </div>
+    <p class="desc">
+      Imagine you're watching a ball fly through the air, but you can only open your eyes for a split second each time. Every glimpse (a camera frame) tells you roughly where the ball is — but your glimpse is blurry and imprecise. Between glimpses, you have to <strong>guess</strong> where the ball went based on how fast it was moving.
+    </p>
+    <p class="desc">
+      The Kalman filter does exactly this. It maintains two things: an <strong>estimate</strong> of the current state (position + velocity), and a measure of <strong>how uncertain</strong> it is about that estimate. Every frame, it runs a two-step cycle:
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div class="analogy">
+        <div class="analogy-icon">🔮</div>
+        <div class="analogy-text">
+          <strong style="color:var(--yellow)">PREDICT:</strong> "Based on where I think it is and how fast it's going, it should be <em>here</em> by next frame." Uncertainty <strong>grows</strong> — we're guessing.
+        </div>
+      </div>
+      <div class="analogy">
+        <div class="analogy-icon">📸</div>
+        <div class="analogy-text">
+          <strong style="color:var(--green)">UPDATE:</strong> "I just got a measurement! It says the object is over <em>there</em>. Let me blend my prediction with this measurement." Uncertainty <strong>shrinks</strong> — we got new info.
+        </div>
+      </div>
+    </div>
+    <p class="desc">
+      The genius is in <strong>how it blends</strong>: if the prediction is very certain, it mostly ignores a noisy measurement. If the prediction is uncertain (lost the object for a while), it trusts the measurement heavily. This blending weight is called the <strong>Kalman gain</strong>.
+    </p>
+  </div>
+
+  <!-- ======== SECTION: The State ======== -->
+  <div class="section">
+    <div class="section-title">
+      The State Vector
+      <span class="tag tag-concept">CONCEPT</span>
+    </div>
+    <p class="desc">
+      The filter's "brain" is a state vector — everything it believes about the object right now. For our 2D tracker:
+    </p>
+    <div class="equation-box" style="margin-bottom:16px;">
+      <div class="eq-line">
+        <span style="color:var(--accent)">state</span> = [<span style="color:var(--yellow)">x</span>, <span style="color:var(--yellow)">y</span>, <span style="color:var(--orange)">vx</span>, <span style="color:var(--orange)">vy</span>]
+      </div>
+      <div class="eq-line eq-comment">
+        position (where it is) + velocity (where it's headed)
+      </div>
+    </div>
+    <p class="desc">
+      Notice we <strong>never directly measure velocity</strong> — our camera only sees position. The filter <em>infers</em> velocity by watching how position changes over time. This is one of its superpowers: it can estimate things you can't directly observe.
+    </p>
+  </div>
+
+  <!-- ======== SECTION: Interactive Simulation ======== -->
+  <div class="section">
+    <div class="section-title">
+      Interactive Simulation
+      <span class="tag tag-concept">TRY IT</span>
+    </div>
+    <p class="desc">
+      Click anywhere on the canvas to place a "measurement" (like a camera detection). Then step through Predict and Update to see exactly what the filter does. Or hit <strong>Auto</strong> and move your mouse to simulate continuous tracking. Watch how the <span style="color:var(--yellow)">yellow prediction</span> chases the <span style="color:var(--green)">green measurement</span>, and how the <span style="color:var(--purple)">purple uncertainty ellipse</span> grows and shrinks.
+    </p>
+
+    <div class="panel">
+      <div class="sim-layout">
+        <div>
+          <canvas id="simCanvas" width="560" height="400"></canvas>
+          <div class="controls-bar">
+            <button class="btn btn-predict" id="btnPredict" onclick="doPredict()">① Predict</button>
+            <button class="btn btn-update" id="btnUpdate" onclick="doUpdate()">② Update</button>
+            <button class="btn" id="btnAuto" onclick="toggleAuto()">Auto</button>
+            <button class="btn" onclick="resetSim()">Reset</button>
+            <button class="btn" id="btnHide" onclick="toggleHide()">Hide Object</button>
+          </div>
+        </div>
+
+        <div class="sim-sidebar">
+          <div class="state-box">
+            <div class="state-box-title" style="color:var(--yellow)">Filter State (estimate)</div>
+            <div class="state-row"><span class="state-label">x position</span><span class="state-val val-yellow" id="stX">—</span></div>
+            <div class="state-row"><span class="state-label">y position</span><span class="state-val val-yellow" id="stY">—</span></div>
+            <div class="state-row"><span class="state-label">x velocity</span><span class="state-val val-orange" id="stVx">—</span></div>
+            <div class="state-row"><span class="state-label">y velocity</span><span class="state-val val-orange" id="stVy">—</span></div>
+          </div>
+
+          <div class="state-box">
+            <div class="state-box-title" style="color:var(--green)">Last Measurement</div>
+            <div class="state-row"><span class="state-label">x</span><span class="state-val val-green" id="msX">—</span></div>
+            <div class="state-row"><span class="state-label">y</span><span class="state-val val-green" id="msY">—</span></div>
+          </div>
+
+          <div class="state-box">
+            <div class="state-box-title" style="color:var(--purple)">Uncertainty (P diagonal)</div>
+            <div class="state-row"><span class="state-label">σ position</span><span class="state-val val-purple" id="uncPos">—</span></div>
+            <div class="state-row"><span class="state-label">σ velocity</span><span class="state-val val-purple" id="uncVel">—</span></div>
+          </div>
+
+          <div class="state-box">
+            <div class="state-box-title" style="color:var(--accent)">Kalman Gain</div>
+            <div class="state-row"><span class="state-label">K (position)</span><span class="state-val val-accent" id="kgPos">—</span></div>
+            <div class="state-row"><span class="state-label">K (velocity)</span><span class="state-val val-accent" id="kgVel">—</span></div>
+            <div class="state-row eq-comment" style="font-size:0.8em;margin-top:4px;">0 = trust prediction only<br>1 = trust measurement only</div>
+          </div>
+
+          <div class="state-box">
+            <div class="state-box-title" style="color:var(--text-dim)">Tune Noise</div>
+            <div class="slider-group">
+              <div class="slider-label">
+                <span>R (measurement noise)</span>
+                <span class="slider-val" id="rVal">25</span>
+              </div>
+              <input type="range" id="rSlider" min="1" max="200" value="25" oninput="updateR(this.value)">
+            </div>
+            <div class="slider-group" style="margin-top:10px;">
+              <div class="slider-label">
+                <span>Q (process noise)</span>
+                <span class="slider-val" id="qVal">4</span>
+              </div>
+              <input type="range" id="qSlider" min="1" max="100" value="4" oninput="updateQ(this.value)">
+            </div>
+          </div>
+
+          <div class="log-box" id="logBox"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== SECTION: Predict Step ======== -->
+  <div class="section">
+    <div class="section-title">
+      Step 1: Predict
+      <span class="tag tag-predict">PREDICT</span>
+    </div>
+    <p class="desc">
+      The predict step answers: <strong>"Given what I know now, where will the object be next?"</strong> It uses a simple physics model — constant velocity — to project the state forward by one time step (dt).
+    </p>
+    <div class="equation-box">
+      <div class="eq-line">
+        <span style="color:var(--yellow)">x_new</span> = <span style="color:var(--yellow)">x</span> + <span style="color:var(--orange)">vx</span> × dt
+        <span class="eq-comment">— position updates by velocity × time</span>
+      </div>
+      <div class="eq-line">
+        <span style="color:var(--yellow)">y_new</span> = <span style="color:var(--yellow)">y</span> + <span style="color:var(--orange)">vy</span> × dt
+      </div>
+      <div class="eq-line">
+        <span style="color:var(--orange)">vx_new</span> = <span style="color:var(--orange)">vx</span>
+        <span class="eq-comment">— velocity stays the same (constant velocity model)</span>
+      </div>
+      <div class="eq-line">
+        <span style="color:var(--orange)">vy_new</span> = <span style="color:var(--orange)">vy</span>
+      </div>
+      <div class="eq-line" style="margin-top:10px;">
+        <span style="color:var(--purple)">P_new</span> = F × <span style="color:var(--purple)">P</span> × Fᵀ + <span style="color:var(--red)">Q</span>
+        <span class="eq-comment">— uncertainty GROWS (we added Q)</span>
+      </div>
+    </div>
+    <p class="desc" style="margin-top:16px;">
+      The key insight: <strong>uncertainty always increases during prediction</strong>. We're extrapolating without new information, so we <em>must</em> become less sure. The <span style="color:var(--red)">Q matrix</span> (process noise) controls how fast uncertainty grows. Higher Q means "I expect the object to do unexpected things" (like a rocket accelerating or changing direction).
+    </p>
+  </div>
+
+  <!-- ======== SECTION: Update Step ======== -->
+  <div class="section">
+    <div class="section-title">
+      Step 2: Update (Correct)
+      <span class="tag tag-update">UPDATE</span>
+    </div>
+    <p class="desc">
+      When a measurement arrives, the filter compares it to the prediction and computes a <strong>correction</strong>. The size of the correction depends on the Kalman gain.
+    </p>
+    <div class="equation-box">
+      <div class="eq-line">
+        <span style="color:var(--blue)">residual</span> = <span style="color:var(--green)">measurement</span> − H × <span style="color:var(--yellow)">predicted_state</span>
+        <span class="eq-comment">— how far off was our prediction?</span>
+      </div>
+      <div class="eq-line" style="margin-top:8px;">
+        <span style="color:var(--accent)">K</span> = <span style="color:var(--purple)">P</span> × Hᵀ × (<span>H × <span style="color:var(--purple)">P</span> × Hᵀ + <span style="color:var(--red)">R</span></span>)⁻¹
+        <span class="eq-comment">— the Kalman gain</span>
+      </div>
+      <div class="eq-line" style="margin-top:8px;">
+        <span style="color:var(--yellow)">state_new</span> = <span style="color:var(--yellow)">state</span> + <span style="color:var(--accent)">K</span> × <span style="color:var(--blue)">residual</span>
+        <span class="eq-comment">— blend prediction with measurement</span>
+      </div>
+      <div class="eq-line">
+        <span style="color:var(--purple)">P_new</span> = (I − <span style="color:var(--accent)">K</span> × H) × <span style="color:var(--purple)">P</span>
+        <span class="eq-comment">— uncertainty SHRINKS (we got info)</span>
+      </div>
+    </div>
+
+    <p class="desc" style="margin-top:16px;">
+      <strong>The Kalman gain (K)</strong> is the heart of the whole thing. It's a number between 0 and 1 for each state variable:
+    </p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="analogy">
+        <div class="analogy-icon" style="font-size:1.4em;color:var(--accent)">K→0</div>
+        <div class="analogy-text">
+          <strong>Prediction is very certain</strong> (small P) or <strong>measurement is very noisy</strong> (large R). The filter mostly ignores the measurement and sticks with its prediction.
+        </div>
+      </div>
+      <div class="analogy">
+        <div class="analogy-icon" style="font-size:1.4em;color:var(--accent)">K→1</div>
+        <div class="analogy-text">
+          <strong>Prediction is uncertain</strong> (large P) or <strong>measurement is very clean</strong> (small R). The filter snaps to the measurement. This happens after losing the object — first measurement back gets high trust.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== SECTION: Why it matters ======== -->
+  <div class="section">
+    <div class="section-title">
+      Why This Matters for Rocket Tracking
+      <span class="tag tag-concept">CONCEPT</span>
+    </div>
+    <p class="desc">
+      A model rocket can travel 50–100+ meters per second. At 30fps, that's 1.5–3+ meters between frames. Your camera might lose detection due to motion blur, sun glare, or the rocket being only a few pixels wide. Without a Kalman filter, every lost frame means total loss of tracking. With it, the filter <strong>coasts on its velocity estimate</strong> — predicting where the rocket should be even when it can't see it. When detection returns, the filter smoothly incorporates the new measurement without jerking.
+    </p>
+    <p class="desc">
+      In Phase 3 (gimbal control), the filter's <strong>predicted position</strong> — not the raw measurement — is what drives the motors. This gives you a smooth, continuous pointing signal even when detections are noisy or intermittent.
+    </p>
+    <div class="callout">
+      <strong>Try this in the sim above:</strong> Set Auto mode, move your mouse to build up velocity, then click "Hide Object." Watch the yellow prediction keep going in a straight line. The purple uncertainty ellipse will grow steadily. Then unhide — see how the filter snaps back to reality and the ellipse shrinks. That recovery is exactly what happens when your tracker re-acquires a rocket after losing it for a few frames.
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// SIMPLE 2D KALMAN FILTER IMPLEMENTATION
+// (We implement it from scratch here so you can see every step)
+// ============================================================
+
+class KalmanFilter2D {
+  constructor() {
+    this.reset();
+    this.R_val = 25;
+    this.Q_pos = 4;
+    this.Q_vel = 16;
+    this.dt = 1;
+    this.lastK = [[0,0],[0,0],[0,0],[0,0]];
+  }
+
+  reset() {
+    // State: [x, y, vx, vy]
+    this.x = [0, 0, 0, 0];
+    this.initialized = false;
+
+    // Covariance matrix (4x4, stored as flat for simplicity)
+    // Start with high uncertainty
+    this.P = [
+      [1000, 0, 0, 0],
+      [0, 1000, 0, 0],
+      [0, 0, 1000, 0],
+      [0, 0, 0, 1000]
+    ];
+
+    this.lastK = [[0,0],[0,0],[0,0],[0,0]];
+  }
+
+  init(mx, my) {
+    this.x = [mx, my, 0, 0];
+    this.P = [
+      [this.R_val, 0, 0, 0],
+      [0, this.R_val, 0, 0],
+      [0, 0, 100, 0],
+      [0, 0, 0, 100]
+    ];
+    this.initialized = true;
+  }
+
+  predict() {
+    if (!this.initialized) return;
+    const dt = this.dt;
+    const [x, y, vx, vy] = this.x;
+
+    // State prediction: x_new = F * x
+    this.x = [x + vx * dt, y + vy * dt, vx, vy];
+
+    // Covariance prediction: P_new = F * P * F^T + Q
+    const F = [
+      [1, 0, dt, 0],
+      [0, 1, 0, dt],
+      [0, 0, 1, 0],
+      [0, 0, 0, 1]
+    ];
+
+    const Q = [
+      [this.Q_pos, 0, 0, 0],
+      [0, this.Q_pos, 0, 0],
+      [0, 0, this.Q_vel, 0],
+      [0, 0, 0, this.Q_vel]
+    ];
+
+    // P = F * P * F^T + Q
+    const FP = matMul(F, this.P);
+    const FT = transpose(F);
+    this.P = matAdd(matMul(FP, FT), Q);
+  }
+
+  update(mx, my) {
+    if (!this.initialized) {
+      this.init(mx, my);
+      return;
+    }
+
+    const H = [[1,0,0,0],[0,1,0,0]];
+    const HT = transpose(H);
+    const R = [[this.R_val, 0], [0, this.R_val]];
+
+    // Residual: z - H*x
+    const predicted_z = [this.x[0], this.x[1]];
+    const residual = [mx - predicted_z[0], my - predicted_z[1]];
+
+    // S = H * P * H^T + R
+    const HP = matMul(H, this.P);
+    const S = matAdd(matMul(HP, HT), R);
+
+    // K = P * H^T * S^(-1)
+    const PHT = matMul(this.P, HT);
+    const Sinv = invert2x2(S);
+    const K = matMul(PHT, Sinv);
+    this.lastK = K;
+
+    // x = x + K * residual
+    for (let i = 0; i < 4; i++) {
+      this.x[i] += K[i][0] * residual[0] + K[i][1] * residual[1];
+    }
+
+    // P = (I - K*H) * P
+    const KH = matMul(K, H);
+    const IKH = [
+      [1-KH[0][0], -KH[0][1], -KH[0][2], -KH[0][3]],
+      [-KH[1][0], 1-KH[1][1], -KH[1][2], -KH[1][3]],
+      [-KH[2][0], -KH[2][1], 1-KH[2][2], -KH[2][3]],
+      [-KH[3][0], -KH[3][1], -KH[3][2], 1-KH[3][3]],
+    ];
+    this.P = matMul(IKH, this.P);
+  }
+}
+
+// --- Matrix helpers ---
+function matMul(A, B) {
+  const m = A.length, n = B[0].length, p = B.length;
+  const C = Array.from({length:m}, ()=>Array(n).fill(0));
+  for(let i=0;i<m;i++) for(let j=0;j<n;j++) for(let k=0;k<p;k++) C[i][j]+=A[i][k]*B[k][j];
+  return C;
+}
+function matAdd(A,B) {
+  return A.map((row,i)=>row.map((v,j)=>v+B[i][j]));
+}
+function transpose(A) {
+  return A[0].map((_,j)=>A.map(r=>r[j]));
+}
+function invert2x2(M) {
+  const [[a,b],[c,d]] = M;
+  const det = a*d - b*c;
+  if(Math.abs(det)<1e-10) return [[1,0],[0,1]];
+  return [[d/det, -b/det],[-c/det, a/det]];
+}
+
+// ============================================================
+// SIMULATION STATE
+// ============================================================
+const canvas = document.getElementById('simCanvas');
+const ctx = canvas.getContext('2d');
+
+const kf = new KalmanFilter2D();
+let measurement = null;      // current measurement [x, y]
+let measurementHistory = [];
+let predictionHistory = [];
+let autoMode = false;
+let hideMode = false;
+let mousePos = null;
+let stepCount = 0;
+let lastPhase = null; // 'predict' or 'update'
+
+// Coordinate scaling
+const W = canvas.width;
+const H = canvas.height;
+
+function log(msg, cls='') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  if(cls) line.className = cls;
+  line.textContent = msg;
+  box.prepend(line);
+  while(box.children.length > 30) box.removeChild(box.lastChild);
+}
+
+function updateStateDisplay() {
+  if (!kf.initialized) {
+    ['stX','stY','stVx','stVy','msX','msY','uncPos','uncVel','kgPos','kgVel'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+    return;
+  }
+
+  document.getElementById('stX').textContent = kf.x[0].toFixed(1);
+  document.getElementById('stY').textContent = kf.x[1].toFixed(1);
+  document.getElementById('stVx').textContent = kf.x[2].toFixed(1);
+  document.getElementById('stVy').textContent = kf.x[3].toFixed(1);
+
+  if (measurement) {
+    document.getElementById('msX').textContent = measurement[0].toFixed(1);
+    document.getElementById('msY').textContent = measurement[1].toFixed(1);
+  }
+
+  const posUnc = Math.sqrt((kf.P[0][0] + kf.P[1][1]) / 2);
+  const velUnc = Math.sqrt((kf.P[2][2] + kf.P[3][3]) / 2);
+  document.getElementById('uncPos').textContent = '±' + posUnc.toFixed(1) + ' px';
+  document.getElementById('uncVel').textContent = '±' + velUnc.toFixed(1) + ' px/f';
+
+  const kPos = ((Math.abs(kf.lastK[0][0]) + Math.abs(kf.lastK[1][1])) / 2);
+  const kVel = ((Math.abs(kf.lastK[2][0]) + Math.abs(kf.lastK[3][1])) / 2);
+  document.getElementById('kgPos').textContent = kPos.toFixed(3);
+  document.getElementById('kgVel').textContent = kVel.toFixed(3);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(42,47,61,0.5)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Measurement trail
+  ctx.strokeStyle = 'rgba(110,231,183,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  let started = false;
+  for (const p of measurementHistory) {
+    if (!p) { started = false; continue; }
+    if (!started) { ctx.moveTo(p[0], p[1]); started = true; }
+    else ctx.lineTo(p[0], p[1]);
+  }
+  ctx.stroke();
+
+  // Prediction trail
+  ctx.strokeStyle = 'rgba(251,191,36,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  started = false;
+  for (const p of predictionHistory) {
+    if (!p) { started = false; continue; }
+    if (!started) { ctx.moveTo(p[0], p[1]); started = true; }
+    else ctx.lineTo(p[0], p[1]);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Uncertainty ellipse
+  if (kf.initialized) {
+    const sx = Math.sqrt(Math.abs(kf.P[0][0]));
+    const sy = Math.sqrt(Math.abs(kf.P[1][1]));
+    const px = kf.x[0], py = kf.x[1];
+
+    ctx.strokeStyle = 'rgba(167,139,250,0.4)';
+    ctx.fillStyle = 'rgba(167,139,250,0.06)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(px, py, Math.min(sx * 2, 300), Math.min(sy * 2, 300), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 1-sigma label
+    if (sx > 8 || sy > 8) {
+      ctx.fillStyle = 'rgba(167,139,250,0.5)';
+      ctx.font = '10px IBM Plex Mono';
+      ctx.fillText('2σ uncertainty', px + Math.min(sx*2, 300) + 6, py + 4);
+    }
+  }
+
+  // Measurement point (green)
+  if (measurement && !hideMode) {
+    ctx.fillStyle = 'rgba(110,231,183,0.2)';
+    ctx.beginPath();
+    ctx.arc(measurement[0], measurement[1], 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#6ee7b7';
+    ctx.lineWidth = 2;
+    const mx = measurement[0], my = measurement[1];
+    ctx.beginPath(); ctx.moveTo(mx-10, my); ctx.lineTo(mx+10, my); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my-10); ctx.lineTo(mx, my+10); ctx.stroke();
+
+    ctx.fillStyle = '#6ee7b7';
+    ctx.font = '11px IBM Plex Mono';
+    ctx.fillText('MEAS', mx + 14, my - 8);
+  }
+
+  // Kalman estimate (yellow)
+  if (kf.initialized) {
+    const kx = kf.x[0], ky = kf.x[1];
+    const vx = kf.x[2], vy = kf.x[3];
+
+    // Velocity arrow
+    const vscale = 8;
+    const evx = kx + vx * vscale;
+    const evy = ky + vy * vscale;
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(kx, ky);
+    ctx.lineTo(evx, evy);
+    ctx.stroke();
+    // Arrowhead
+    const angle = Math.atan2(evy - ky, evx - kx);
+    ctx.beginPath();
+    ctx.moveTo(evx, evy);
+    ctx.lineTo(evx - 8*Math.cos(angle-0.4), evy - 8*Math.sin(angle-0.4));
+    ctx.moveTo(evx, evy);
+    ctx.lineTo(evx - 8*Math.cos(angle+0.4), evy - 8*Math.sin(angle+0.4));
+    ctx.stroke();
+
+    // Crosshair
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(kx-12, ky); ctx.lineTo(kx+12, ky); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(kx, ky-12); ctx.lineTo(kx, ky+12); ctx.stroke();
+    ctx.beginPath(); ctx.arc(kx, ky, 16, 0, Math.PI*2); ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '11px IBM Plex Mono';
+    ctx.fillText('PRED', kx + 14, ky + 22);
+  }
+
+  // Hide mode indicator
+  if (hideMode) {
+    ctx.fillStyle = 'rgba(248,113,113,0.15)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#f87171';
+    ctx.font = '14px IBM Plex Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('OBJECT HIDDEN — filter predicting without measurements', W/2, 30);
+    ctx.textAlign = 'left';
+  }
+
+  // Instructions
+  if (!kf.initialized && !autoMode) {
+    ctx.fillStyle = 'rgba(79,209,197,0.6)';
+    ctx.font = '13px IBM Plex Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('Click to place first measurement', W/2, H/2);
+    ctx.textAlign = 'left';
+  }
+
+  // Legend
+  ctx.font = '10px IBM Plex Mono';
+  ctx.fillStyle = '#6ee7b7'; ctx.fillText('● Measurement', W - 150, H - 36);
+  ctx.fillStyle = '#fbbf24'; ctx.fillText('● Prediction', W - 150, H - 22);
+  ctx.fillStyle = '#a78bfa'; ctx.fillText('● Uncertainty', W - 150, H - 8);
+}
+
+// --- Actions ---
+function doPredict() {
+  if (!kf.initialized) { log('Place a measurement first (click canvas)', 'log-info'); return; }
+  kf.predict();
+  predictionHistory.push([kf.x[0], kf.x[1]]);
+  if (predictionHistory.length > 200) predictionHistory.shift();
+  lastPhase = 'predict';
+  stepCount++;
+  log(`Step ${stepCount}: PREDICT → pos=(${kf.x[0].toFixed(1)}, ${kf.x[1].toFixed(1)})  vel=(${kf.x[2].toFixed(1)}, ${kf.x[3].toFixed(1)})`, 'log-predict');
+  updateStateDisplay();
+  draw();
+}
+
+function doUpdate() {
+  if (!measurement) { log('No measurement — click canvas first', 'log-info'); return; }
+  kf.update(measurement[0], measurement[1]);
+  lastPhase = 'update';
+  stepCount++;
+  log(`Step ${stepCount}: UPDATE → pos=(${kf.x[0].toFixed(1)}, ${kf.x[1].toFixed(1)})  K_pos=${((Math.abs(kf.lastK[0][0])+Math.abs(kf.lastK[1][1]))/2).toFixed(3)}`, 'log-update');
+  predictionHistory.push([kf.x[0], kf.x[1]]);
+  if (predictionHistory.length > 200) predictionHistory.shift();
+  updateStateDisplay();
+  draw();
+}
+
+let autoInterval = null;
+function toggleAuto() {
+  autoMode = !autoMode;
+  document.getElementById('btnAuto').classList.toggle('active', autoMode);
+  if (autoMode) {
+    autoInterval = setInterval(() => {
+      if (mousePos && !hideMode) {
+        // Add slight noise to simulate real detection
+        const noise = kf.R_val ? Math.sqrt(kf.R_val) : 5;
+        measurement = [
+          mousePos[0] + (Math.random()-0.5) * noise,
+          mousePos[1] + (Math.random()-0.5) * noise
+        ];
+        measurementHistory.push([measurement[0], measurement[1]]);
+        if (measurementHistory.length > 200) measurementHistory.shift();
+      } else {
+        measurementHistory.push(null);
+      }
+
+      if (kf.initialized) {
+        kf.predict();
+        if (measurement && !hideMode) {
+          kf.update(measurement[0], measurement[1]);
+        }
+        predictionHistory.push([kf.x[0], kf.x[1]]);
+        if (predictionHistory.length > 200) predictionHistory.shift();
+      } else if (measurement) {
+        kf.update(measurement[0], measurement[1]);
+      }
+
+      updateStateDisplay();
+      draw();
+    }, 50);
+  } else {
+    clearInterval(autoInterval);
+  }
+}
+
+function toggleHide() {
+  hideMode = !hideMode;
+  document.getElementById('btnHide').classList.toggle('active', hideMode);
+  if (hideMode) {
+    log('Object HIDDEN — filter coasting on prediction', 'log-info');
+  } else {
+    log('Object VISIBLE again', 'log-info');
+  }
+}
+
+function resetSim() {
+  kf.reset();
+  measurement = null;
+  measurementHistory = [];
+  predictionHistory = [];
+  stepCount = 0;
+  lastPhase = null;
+  hideMode = false;
+  document.getElementById('btnHide').classList.remove('active');
+  log('--- RESET ---', 'log-info');
+  updateStateDisplay();
+  draw();
+}
+
+function updateR(val) {
+  kf.R_val = parseFloat(val);
+  document.getElementById('rVal').textContent = val;
+}
+
+function updateQ(val) {
+  kf.Q_pos = parseFloat(val);
+  kf.Q_vel = parseFloat(val) * 4;
+  document.getElementById('qVal').textContent = val;
+}
+
+// --- Canvas events ---
+canvas.addEventListener('click', (e) => {
+  if (autoMode) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  measurement = [x, y];
+  measurementHistory.push([x, y]);
+  if (measurementHistory.length > 200) measurementHistory.shift();
+
+  if (!kf.initialized) {
+    kf.update(x, y);
+    log(`Initialized at (${x.toFixed(1)}, ${y.toFixed(1)})`, 'log-info');
+    predictionHistory.push([kf.x[0], kf.x[1]]);
+  }
+
+  updateStateDisplay();
+  draw();
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const scaleY = H / rect.height;
+  mousePos = [(e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY];
+});
+
+canvas.addEventListener('mouseleave', () => {
+  mousePos = null;
+});
+
+// Init
+updateStateDisplay();
+draw();
+</script>
+</body>
+</html>

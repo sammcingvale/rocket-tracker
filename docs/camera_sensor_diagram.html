@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How a Camera Sensor Works</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0c0e13;
+    --surface: #14171e;
+    --surface2: #1a1e28;
+    --border: #2a2f3d;
+    --text: #d4d8e3;
+    --text-dim: #6b7280;
+    --accent: #4fd1c5;
+    --red: #f87171;
+    --green: #6ee7b7;
+    --blue: #60a5fa;
+    --red-dim: rgba(248,113,113,0.15);
+    --green-dim: rgba(110,231,183,0.15);
+    --blue-dim: rgba(96,165,250,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Serif 4', Georgia, serif;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.6em;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.95em;
+    margin-bottom: 48px;
+    font-style: italic;
+  }
+
+  /* --- Stage sections --- */
+  .stage {
+    margin-bottom: 56px;
+    position: relative;
+  }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .stage-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75em;
+    color: var(--accent);
+    background: rgba(79,209,197,0.1);
+    border: 1px solid rgba(79,209,197,0.25);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+
+  .stage-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.05em;
+    font-weight: 500;
+    color: #e2e6f0;
+  }
+
+  .stage-desc {
+    color: var(--text-dim);
+    font-size: 0.92em;
+    margin-bottom: 24px;
+    max-width: 700px;
+    line-height: 1.7;
+  }
+
+  /* --- Flow arrow between stages --- */
+  .flow-arrow {
+    text-align: center;
+    margin: -20px 0 36px;
+    color: var(--border);
+    font-size: 1.8em;
+    letter-spacing: 4px;
+    user-select: none;
+  }
+
+  /* --- Diagram panels --- */
+  .diagram-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .diagram-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(79,209,197,0.3), transparent);
+  }
+
+  /* --- Stage 1: Lens + Sensor cross-section --- */
+  .cross-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px 0;
+    min-height: 220px;
+  }
+
+  .cs-element {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cs-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .light-rays {
+    position: relative;
+    width: 60px;
+    height: 160px;
+  }
+
+  .light-rays .ray {
+    position: absolute;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(255,220,100,0.7), rgba(255,220,100,0));
+    transform-origin: left center;
+    animation: rayPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes rayPulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .lens-shape {
+    width: 36px;
+    height: 140px;
+    border: 2px solid rgba(96,165,250,0.5);
+    border-radius: 50%;
+    background: rgba(96,165,250,0.05);
+    position: relative;
+  }
+
+  .converging-rays {
+    width: 80px;
+    height: 160px;
+    position: relative;
+  }
+
+  .converging-rays .ray {
+    position: absolute;
+    height: 1.5px;
+    background: linear-gradient(90deg, rgba(255,220,100,0.5), rgba(255,220,100,0.8));
+    transform-origin: left center;
+  }
+
+  .sensor-chip {
+    width: 14px;
+    height: 140px;
+    background: var(--surface2);
+    border: 2px solid var(--accent);
+    border-radius: 3px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 2px;
+    overflow: hidden;
+  }
+
+  .sensor-chip .photosite-row {
+    display: flex;
+    gap: 1px;
+    justify-content: center;
+  }
+
+  .sensor-chip .mini-site {
+    width: 3px;
+    height: 3px;
+    border-radius: 0.5px;
+  }
+
+  /* --- Stage 2: Bayer filter interactive grid --- */
+  .bayer-grid-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .bayer-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+    max-width: 420px;
+    width: 100%;
+  }
+
+  .bayer-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    position: relative;
+  }
+
+  .bayer-cell.r { background: var(--red-dim); color: var(--red); border-color: rgba(248,113,113,0.2); }
+  .bayer-cell.g { background: var(--green-dim); color: var(--green); border-color: rgba(110,231,183,0.2); }
+  .bayer-cell.b { background: var(--blue-dim); color: var(--blue); border-color: rgba(96,165,250,0.2); }
+
+  .bayer-cell:hover {
+    transform: scale(1.08);
+    z-index: 2;
+  }
+  .bayer-cell.r:hover { border-color: var(--red); box-shadow: 0 0 16px rgba(248,113,113,0.3); }
+  .bayer-cell.g:hover { border-color: var(--green); box-shadow: 0 0 16px rgba(110,231,183,0.3); }
+  .bayer-cell.b:hover { border-color: var(--blue); box-shadow: 0 0 16px rgba(96,165,250,0.3); }
+
+  .bayer-cell.active {
+    transform: scale(1.12);
+    z-index: 3;
+  }
+  .bayer-cell.active.r { border-color: var(--red); box-shadow: 0 0 20px rgba(248,113,113,0.5); background: rgba(248,113,113,0.3); }
+  .bayer-cell.active.g { border-color: var(--green); box-shadow: 0 0 20px rgba(110,231,183,0.5); background: rgba(110,231,183,0.3); }
+  .bayer-cell.active.b { border-color: var(--blue); box-shadow: 0 0 20px rgba(96,165,250,0.5); background: rgba(96,165,250,0.3); }
+
+  .bayer-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8em;
+    color: var(--text-dim);
+    text-align: center;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  .bayer-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75em;
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+  }
+
+  .legend-swatch.r { background: var(--red-dim); border: 1px solid rgba(248,113,113,0.4); }
+  .legend-swatch.g { background: var(--green-dim); border: 1px solid rgba(110,231,183,0.4); }
+  .legend-swatch.b { background: var(--blue-dim); border: 1px solid rgba(96,165,250,0.4); }
+
+  /* --- Stage 3: Demosaicing animation --- */
+  .demosaic-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding: 16px 0;
+  }
+
+  .pixel-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pixel-group-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 44px);
+    gap: 3px;
+  }
+
+  .mini-cell {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65em;
+    font-weight: 500;
+    transition: all 0.4s ease;
+  }
+
+  .arrow-symbol {
+    font-size: 1.8em;
+    color: var(--border);
+    user-select: none;
+  }
+
+  .result-pixel {
+    width: 92px;
+    height: 92px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7em;
+    gap: 4px;
+    border: 2px solid var(--border);
+    transition: all 0.5s ease;
+  }
+
+  .result-pixel .rgb-val { font-weight: 600; }
+
+  /* --- Stage 4: Full frame pixel grid --- */
+  .frame-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .pixel-frame {
+    display: grid;
+    gap: 1px;
+    width: fit-content;
+    max-width: 100%;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    padding: 1px;
+  }
+
+  .frame-pixel {
+    width: 24px;
+    height: 24px;
+    transition: all 0.1s;
+  }
+
+  .frame-stats {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78em;
+    color: var(--text-dim);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-val {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* --- Interactive controls --- */
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .ctrl-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75em;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .ctrl-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ctrl-btn.active {
+    border-color: var(--accent);
+    background: rgba(79,209,197,0.1);
+    color: var(--accent);
+  }
+
+  /* --- Callout --- */
+  .callout {
+    margin-top: 48px;
+    padding: 20px 24px;
+    border-radius: 10px;
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    font-size: 0.9em;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .callout strong {
+    color: var(--text);
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 24px 16px 60px; }
+    h1 { font-size: 1.3em; }
+    .cross-section { flex-wrap: wrap; gap: 20px; }
+    .demosaic-container { flex-direction: column; }
+    .mini-grid { grid-template-columns: repeat(2, 36px); }
+    .mini-cell { width: 36px; height: 36px; font-size: 0.55em; }
+    .result-pixel { width: 76px; height: 76px; }
+    .arrow-symbol { transform: rotate(90deg); }
+    .frame-pixel { width: 16px; height: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>How a Camera Sensor Sees</h1>
+  <p class="subtitle">From photons hitting silicon to the RGB pixel values in your OpenCV frame</p>
+
+  <!-- STAGE 1: Light through lens onto sensor -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">01</span>
+      <span class="stage-title">Light → Lens → Sensor</span>
+    </div>
+    <p class="stage-desc">
+      Light from the scene enters through a lens, which focuses it onto a small silicon chip — the image sensor. The sensor is covered in a grid of millions of tiny light detectors called <strong style="color:var(--text)">photosites</strong>. Each photosite converts photons into an electrical charge: more light = higher voltage.
+    </p>
+    <div class="diagram-panel">
+      <div class="cross-section" id="crossSection">
+        <div class="cs-element">
+          <div class="light-rays" id="lightRays"></div>
+          <span class="cs-label">Scene light</span>
+        </div>
+        <div class="cs-element">
+          <div class="lens-shape"></div>
+          <span class="cs-label">Lens</span>
+        </div>
+        <div class="cs-element">
+          <div class="converging-rays" id="convergingRays"></div>
+          <span class="cs-label">Focused light</span>
+        </div>
+        <div class="cs-element">
+          <div class="sensor-chip" id="sensorChip"></div>
+          <span class="cs-label">Sensor</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">⋮</div>
+
+  <!-- STAGE 2: Bayer filter -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">02</span>
+      <span class="stage-title">The Bayer Filter Mosaic</span>
+    </div>
+    <p class="stage-desc">
+      Each photosite only measures brightness, not color. To get color, a mosaic of tiny colored filters sits on top of the sensor. Each photosite sees through only one filter — red, green, or blue. Notice there are twice as many green filters: human eyes are most sensitive to green, so extra green resolution means sharper-looking images. <strong style="color:var(--text)">Click any cell</strong> to inspect it.
+    </p>
+    <div class="diagram-panel">
+      <div class="bayer-grid-container">
+        <div class="bayer-grid" id="bayerGrid"></div>
+        <div class="bayer-info" id="bayerInfo">Click a photosite to see what it measures</div>
+        <div class="bayer-legend">
+          <div class="legend-item"><div class="legend-swatch r"></div><span style="color:var(--red)">Red filter</span></div>
+          <div class="legend-item"><div class="legend-swatch g"></div><span style="color:var(--green)">Green filter</span></div>
+          <div class="legend-item"><div class="legend-swatch b"></div><span style="color:var(--blue)">Blue filter</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">⋮</div>
+
+  <!-- STAGE 3: Demosaicing -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">03</span>
+      <span class="stage-title">Demosaicing — Interpolating Color</span>
+    </div>
+    <p class="stage-desc">
+      Each photosite only knows one color channel. To produce a full RGB value for each pixel, the camera's processor <strong style="color:var(--text)">interpolates</strong> the missing channels from its neighbors. This 2×2 Bayer group becomes one pixel with all three channels. The color you see is partly real measurement, partly educated guess.
+    </p>
+    <div class="diagram-panel">
+      <div class="demosaic-container">
+        <div class="pixel-group">
+          <span class="pixel-group-label">Bayer 2×2 group</span>
+          <div class="mini-grid">
+            <div class="mini-cell" style="background:var(--red-dim);color:var(--red)">R:180</div>
+            <div class="mini-cell" style="background:var(--green-dim);color:var(--green)">G:210</div>
+            <div class="mini-cell" style="background:var(--green-dim);color:var(--green)">G:195</div>
+            <div class="mini-cell" style="background:var(--blue-dim);color:var(--blue)">B:90</div>
+          </div>
+        </div>
+        <span class="arrow-symbol">→</span>
+        <div class="pixel-group">
+          <span class="pixel-group-label">Interpolated pixel</span>
+          <div class="result-pixel" id="resultPixel" style="background: rgb(180,203,90); border-color: rgba(180,203,90,0.4);">
+            <span class="rgb-val" style="color:#111">R:180</span>
+            <span class="rgb-val" style="color:#111">G:203</span>
+            <span class="rgb-val" style="color:#111">B:90</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow">⋮</div>
+
+  <!-- STAGE 4: Final pixel grid / frame -->
+  <div class="stage">
+    <div class="stage-header">
+      <span class="stage-num">04</span>
+      <span class="stage-title">The Final Frame — A Grid of RGB Pixels</span>
+    </div>
+    <p class="stage-desc">
+      The result is a 2D grid of pixels, each with an (R, G, B) value. This is exactly what OpenCV gives you as a NumPy array. For a 640×480 frame, that's 307,200 pixels, each with 3 values, captured 30 times per second. Toggle the view to see what different representations look like.
+    </p>
+    <div class="diagram-panel">
+      <div class="frame-section">
+        <div class="controls">
+          <button class="ctrl-btn active" onclick="setFrameMode('color')">Full Color</button>
+          <button class="ctrl-btn" onclick="setFrameMode('red')">Red Channel</button>
+          <button class="ctrl-btn" onclick="setFrameMode('green')">Green Channel</button>
+          <button class="ctrl-btn" onclick="setFrameMode('blue')">Blue Channel</button>
+          <button class="ctrl-btn" onclick="setFrameMode('grey')">Greyscale</button>
+        </div>
+        <div class="pixel-frame" id="pixelFrame"></div>
+        <div class="frame-stats">
+          <span>Resolution: <span class="stat-val">640 × 480</span></span>
+          <span>Pixels: <span class="stat-val">307,200</span></span>
+          <span>Values/frame: <span class="stat-val">921,600</span></span>
+          <span>FPS: <span class="stat-val">30</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Key takeaway for tracking:</strong> Your camera gives you nothing but a flat grid of RGB numbers — no depth, no object identity, no motion. Everything your tracker "knows" about the rocket (where it is, how fast it's moving, what it is) must be inferred from these numbers alone. That's what makes computer vision both challenging and fascinating.
+  </div>
+
+</div>
+
+<script>
+// --- Stage 1: Light rays ---
+function buildLightRays() {
+  const container = document.getElementById('lightRays');
+  for (let i = 0; i < 6; i++) {
+    const ray = document.createElement('div');
+    ray.className = 'ray';
+    const y = 15 + i * 26;
+    ray.style.top = y + 'px';
+    ray.style.left = '0px';
+    ray.style.width = '55px';
+    ray.style.animationDelay = (i * 0.3) + 's';
+    container.appendChild(ray);
+  }
+
+  const conv = document.getElementById('convergingRays');
+  for (let i = 0; i < 6; i++) {
+    const ray = document.createElement('div');
+    ray.className = 'ray';
+    const startY = 15 + i * 26;
+    const endY = 80;
+    const angle = Math.atan2(endY - startY, 75) * (180 / Math.PI);
+    const length = Math.sqrt(75*75 + (endY - startY)*(endY - startY));
+    ray.style.top = startY + 'px';
+    ray.style.left = '0px';
+    ray.style.width = length + 'px';
+    ray.style.transform = `rotate(${angle}deg)`;
+    conv.appendChild(ray);
+  }
+}
+
+// --- Stage 1: Sensor photosites ---
+function buildSensorChip() {
+  const chip = document.getElementById('sensorChip');
+  const colors = ['var(--red)', 'var(--green)', 'var(--green)', 'var(--blue)'];
+  for (let row = 0; row < 20; row++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'photosite-row';
+    for (let col = 0; col < 2; col++) {
+      const site = document.createElement('div');
+      site.className = 'mini-site';
+      const ci = ((row % 2) * 2 + col) % 4;
+      site.style.background = colors[ci];
+      site.style.opacity = '0.6';
+      rowDiv.appendChild(site);
+    }
+    chip.appendChild(rowDiv);
+  }
+}
+
+// --- Stage 2: Bayer grid ---
+function buildBayerGrid() {
+  const grid = document.getElementById('bayerGrid');
+  const info = document.getElementById('bayerInfo');
+  const pattern = ['r','g','g','b']; // RGGB Bayer pattern
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const cell = document.createElement('div');
+      const pi = (row % 2) * 2 + (col % 2);
+      const ch = pattern[pi];
+      cell.className = `bayer-cell ${ch}`;
+
+      const brightness = Math.floor(80 + Math.random() * 175);
+      cell.textContent = brightness;
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+      cell.dataset.channel = ch;
+      cell.dataset.value = brightness;
+
+      cell.addEventListener('click', () => {
+        document.querySelectorAll('.bayer-cell.active').forEach(c => c.classList.remove('active'));
+        cell.classList.add('active');
+        const chName = {r:'RED', g:'GREEN', b:'BLUE'}[ch];
+        const chColor = {r:'var(--red)', g:'var(--green)', b:'var(--blue)'}[ch];
+        info.innerHTML = `Photosite [${row},${col}]: sees <span style="color:${chColor};font-weight:600">${chName}</span> light only → intensity <span style="color:${chColor};font-weight:600">${brightness}</span>/255`;
+      });
+
+      grid.appendChild(cell);
+    }
+  }
+}
+
+// --- Stage 4: Pixel frame with channel toggle ---
+const FRAME_COLS = 28;
+const FRAME_ROWS = 18;
+let frameData = [];
+
+function generateFrameData() {
+  frameData = [];
+  for (let row = 0; row < FRAME_ROWS; row++) {
+    for (let col = 0; col < FRAME_COLS; col++) {
+      // Create a scene: blue sky top, green ground bottom, red object center-right
+      let r, g, b;
+      const ny = row / FRAME_ROWS;
+      const nx = col / FRAME_COLS;
+
+      // Sky gradient
+      r = Math.floor(60 + ny * 30);
+      g = Math.floor(100 + ny * 40);
+      b = Math.floor(200 - ny * 60);
+
+      // Ground
+      if (ny > 0.65) {
+        const gy = (ny - 0.65) / 0.35;
+        r = Math.floor(60 + gy * 80);
+        g = Math.floor(120 + gy * 40);
+        b = Math.floor(50 + gy * 20);
+      }
+
+      // Red "rocket" blob
+      const dx = nx - 0.65;
+      const dy = ny - 0.3;
+      const dist = Math.sqrt(dx*dx*4 + dy*dy*9);
+      if (dist < 0.15) {
+        const t = 1 - dist/0.15;
+        r = Math.floor(r + (230 - r) * t);
+        g = Math.floor(g + (50 - g) * t);
+        b = Math.floor(b + (40 - b) * t);
+      }
+
+      // Add noise
+      r = Math.min(255, Math.max(0, r + Math.floor((Math.random()-0.5)*20)));
+      g = Math.min(255, Math.max(0, g + Math.floor((Math.random()-0.5)*20)));
+      b = Math.min(255, Math.max(0, b + Math.floor((Math.random()-0.5)*20)));
+
+      frameData.push({r, g, b});
+    }
+  }
+}
+
+function buildPixelFrame() {
+  const frame = document.getElementById('pixelFrame');
+  frame.style.gridTemplateColumns = `repeat(${FRAME_COLS}, 1fr)`;
+  frame.innerHTML = '';
+  generateFrameData();
+
+  for (let i = 0; i < frameData.length; i++) {
+    const px = document.createElement('div');
+    px.className = 'frame-pixel';
+    const {r, g, b} = frameData[i];
+    px.style.background = `rgb(${r},${g},${b})`;
+    px.dataset.index = i;
+    frame.appendChild(px);
+  }
+}
+
+function setFrameMode(mode) {
+  document.querySelectorAll('.ctrl-btn').forEach(b => {
+    b.classList.remove('active');
+    if (b.textContent.toLowerCase().replace(' ','') === mode || 
+        (mode === 'color' && b.textContent === 'Full Color') ||
+        (mode === 'red' && b.textContent === 'Red Channel') ||
+        (mode === 'green' && b.textContent === 'Green Channel') ||
+        (mode === 'blue' && b.textContent === 'Blue Channel') ||
+        (mode === 'grey' && b.textContent === 'Greyscale')) {
+      b.classList.add('active');
+    }
+  });
+
+  const pixels = document.querySelectorAll('.frame-pixel');
+  pixels.forEach((px, i) => {
+    const {r, g, b} = frameData[i];
+    switch(mode) {
+      case 'color':
+        px.style.background = `rgb(${r},${g},${b})`;
+        break;
+      case 'red':
+        px.style.background = `rgb(${r},0,0)`;
+        break;
+      case 'green':
+        px.style.background = `rgb(0,${g},0)`;
+        break;
+      case 'blue':
+        px.style.background = `rgb(0,0,${b})`;
+        break;
+      case 'grey':
+        const grey = Math.floor(0.299*r + 0.587*g + 0.114*b);
+        px.style.background = `rgb(${grey},${grey},${grey})`;
+        break;
+    }
+  });
+}
+
+// --- Init ---
+buildLightRays();
+buildSensorChip();
+buildBayerGrid();
+buildPixelFrame();
+</script>
+</body>
+</html>
