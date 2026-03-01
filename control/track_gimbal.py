@@ -74,7 +74,7 @@ MIN_CONTOUR_AREA = 500
 SERVO_PAN_HOME  = 90    # Decrease to point more left, increase for right
 SERVO_TILT_HOME = 90    # Decrease to tilt down, increase to tilt up
 SERVO_MIN       = 10
-SERVO_MAX       = 170
+SERVO_MAX       = 140   # Should be 170 if you have max range
 
 # ---------------------------------------------------------------------------
 # DETECTION SMOOTHING
@@ -90,7 +90,7 @@ SMOOTH_WINDOW = 3
 # If the gimbal runs away when it sees the object, flip the relevant axis.
 # Press 'x' to flip pan direction, 'y' to flip tilt direction.
 PAN_INVERT  = 1     # 1 or -1
-TILT_INVERT = -1    # 1 or -1
+TILT_INVERT = 1     # 1 or -1
 
 # ---------------------------------------------------------------------------
 # PID PRESETS
