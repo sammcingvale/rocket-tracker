@@ -69,10 +69,19 @@ MIN_CONTOUR_AREA = 500
 # ---------------------------------------------------------------------------
 # SERVO CONFIGURATION
 # ---------------------------------------------------------------------------
-SERVO_PAN_HOME  = 90
-SERVO_TILT_HOME = 90
+# Adjust HOME values so the gimbal points straight ahead at startup.
+# If your gimbal is slightly right/up at home, tweak these:
+SERVO_PAN_HOME  = 90    # Decrease to point more left, increase for right
+SERVO_TILT_HOME = 90    # Decrease to tilt down, increase to tilt up
 SERVO_MIN       = 10
 SERVO_MAX       = 170
+
+# ---------------------------------------------------------------------------
+# DETECTION SMOOTHING
+# ---------------------------------------------------------------------------
+# Rolling average of the last N centroids to reduce jitter.
+# Higher = smoother but adds latency. 3-5 is a good range.
+SMOOTH_WINDOW = 3
 
 # ---------------------------------------------------------------------------
 # DIRECTION INVERSION
@@ -435,6 +444,9 @@ def main():
     last_serial_send = 0.0
     serial_send_interval = 0.033  # ~30 Hz
 
+    # Detection smoothing buffer (rolling average of last N centroids)
+    smooth_buffer = []
+
     print("\nTracking started!")
     print("Controls: q=quit, h=home, p=pause, 1/2/3=PID preset, +/-=tune P")
     print("          x=flip pan direction, y=flip tilt direction\n")
@@ -462,6 +474,21 @@ def main():
 
         # --- DETECT ---
         detection, mask = detect_object(frame, lower_hsv, upper_hsv)
+
+        # --- SMOOTH DETECTION ---
+        # Rolling average of recent centroids to reduce jitter.
+        # Raw detection still feeds Kalman (it has its own smoothing).
+        # Smoothed detection feeds PID.
+        smoothed_detection = None
+        if detection is not None:
+            smooth_buffer.append((float(detection[0]), float(detection[1])))
+            if len(smooth_buffer) > SMOOTH_WINDOW:
+                smooth_buffer.pop(0)
+            avg_x = sum(p[0] for p in smooth_buffer) / len(smooth_buffer)
+            avg_y = sum(p[1] for p in smooth_buffer) / len(smooth_buffer)
+            smoothed_detection = (avg_x, avg_y)
+        else:
+            smooth_buffer.clear()  # Reset on detection loss
 
         # --- KALMAN FILTER ---
         kalman_pos = None
@@ -499,9 +526,9 @@ def main():
         # real velocity with the gimbal's own movement.
         pid_target = None
 
-        if tracking_active and detection is not None:
-            # We can see it — use the raw measurement
-            pid_target = (float(detection[0]), float(detection[1]))
+        if tracking_active and smoothed_detection is not None:
+            # We can see it — use the smoothed measurement
+            pid_target = smoothed_detection
         elif tracking_active and kalman_pos is not None:
             # Can't see it — coast on Kalman prediction
             pid_target = kalman_pos
