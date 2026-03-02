@@ -8,8 +8,8 @@ A computer vision system that visually tracks model rockets in flight and points
 |-------|--------|-------------|
 | 1. Software Tracking | ✅ Complete | Color detection + Kalman filter in OpenCV |
 | 2. Pan/Tilt Gimbal | ✅ Complete | MG995 servos, Arduino UNO R4 WiFi, serial control |
-| 3. Closed-Loop Control | ✅ Complete | Camera-on-gimbal PID tracking with live tuning |
-| 4. Hardware Upgrade | 🔜 Next | Brushless gimbal motors (2804 + SimpleFOC), laser pointer |
+| 3. Closed-Loop Control | ✅ Complete | Camera-on-gimbal PID tracking, person detection, live tuning |
+| 4. Hardware Upgrade | 🔧 In Progress | Brushless gimbal motors (2804 + SimpleFOC), laser pointer |
 | 5. Outdoor Rocket Tracking | 📋 Planned | Field testing with model rockets |
 
 ## System Architecture
@@ -114,6 +114,7 @@ python control/track_gimbal.py --camera 0 --no-serial
 | `1` / `2` / `3` | PID preset: conservative / balanced / aggressive |
 | `+` / `-` | Fine-tune P gain |
 | `x` / `y` | Flip pan / tilt direction |
+| `m` | Toggle detection mode (color / person) |
 
 #### HSV Calibration
 Default values tuned for a red marker cap against mixed backgrounds:

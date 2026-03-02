@@ -96,19 +96,68 @@ Dead zone:     ±15 pixels
 - Updated (Phase 3): lower=[0, 180, 50], upper=[10, 255, 255]
 - Different shade of red (hue 0-10 vs 160-179), high saturation floor rejects white backgrounds
 
+### Detection Smoothing
+- Added rolling average of last N centroids (SMOOTH_WINDOW=3) between detection and PID
+- Raw detection still feeds Kalman filter (it has its own smoothing)
+- Smoothed detection feeds PID — reduces frame-to-frame jitter noticeably
+- Buffer clears on detection loss to prevent stale data leaking in
+
+### Home Position Calibration
+- Python-side home() was sending firmware's hardcoded 'H' command (always 90/90)
+- Fixed: home() now calls send_angles(SERVO_PAN_HOME, SERVO_TILT_HOME)
+- Allows per-axis calibration in Python config (e.g., SERVO_TILT_HOME=80 to aim camera up)
+
+### Person Tracking Mode
+- Press 'm' to toggle between color detection and person detection
+- Three cascading detectors in priority order:
+  1. Upper body Haar cascade — works with torso + head visible (best for low camera)
+  2. Face Haar cascade — works with head/shoulders only
+  3. HOG full body — fallback when full body in frame
+- Aiming point: center of detected region (chest for upper body, center for face)
+- Lesson: HOG detector needs head-to-knees visible — useless from a low table
+- Lesson: Haar cascades produce false positives on symmetric objects (grandfather clock, picture frames)
+
+### Persistence Filter
+- Problem: Haar cascades fire on furniture, clock pendulums, etc.
+- Solution: new detections must appear within 80px of the same spot for 3 consecutive frames
+- Once confirmed, single-frame detections accepted (no lag during active tracking)
+- Resets after 10 frames without detection, requiring re-confirmation
+- Tightened cascade thresholds: minNeighbors 3→5, larger minSize
+
+### PID Tuning Dashboard
+- Interactive React simulation of the gimbal system (`docs/pid_dashboard.jsx`)
+- Same PID math, dead zone, output clamp, pixel-to-degree conversion as real system
+- Drag target in camera view, adjust P/I/D sliders, watch real-time graphs
+- Presets match real tracker (conservative, balanced, aggressive, try-I, try-D)
+- Key experiments: I-term windup visible, saturation visible, dead zone behavior
+
+### System Architecture Deep Dive
+- Interactive 9-stage pipeline diagram (`docs/system_diagram.jsx`)
+- Latency analysis: ~55ms total, servo response (20ms) is biggest bottleneck
+- Two independent PID controllers (pan + tilt) with shared gains
+- Three feedback loops identified: visual (intentional), mechanical coupling (parasitic), Kalman coasting (open-loop fallback)
+
+### Current State
+- Stable face tracking of walking person with conservative PID
+- Detection is now the weakest link, not control — exactly where we want to be
+- HSV color tracking hit its ceiling (lighting sensitivity, false matches)
+- Haar cascades work but are brittle — neural detector (MobileNet SSD, MediaPipe) is the natural next step
+- All PID/smoothing/persistence work carries forward regardless of detection method
+
 ---
 
-## Phase 4: Hardware Upgrade (planned)
+## Phase 4: Brushless Motor Upgrade (hardware arrived!)
 
-### Components Ordered
+### Components
 - MKS Dual FOC V3.2 + ESP32 (dual brushless motor driver)
 - 2x 2804 brushless gimbal motor + AS5600 encoder
 - 12V 3A power supply
 - 5mW 650nm red laser module
 
 ### Why Brushless
-- MG995 servos: ~400°/sec, ~1° accuracy, gear backlash
-- 2804 brushless + AS5600: direct drive, 0.087° accuracy, no backlash, faster repositioning
+- MG995 servos: ~400°/sec, ~1° accuracy, gear backlash, holding vibration
+- 2804 brushless + AS5600: direct drive, 0.087° accuracy, no backlash, 1-3ms response
+- Expected latency improvement: motor stage from ~20ms to ~2ms
 - SimpleFOC library provides Arduino-compatible FOC control
 
 ### Key Challenge

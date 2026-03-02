@@ -74,7 +74,7 @@ MIN_CONTOUR_AREA = 500
 SERVO_PAN_HOME  = 90    # Decrease to point more left, increase for right
 SERVO_TILT_HOME = 90    # Decrease to tilt down, increase to tilt up
 SERVO_MIN       = 10
-SERVO_MAX       = 140   # Should be 170 if you have max range
+SERVO_MAX       = 170
 
 # ---------------------------------------------------------------------------
 # DETECTION SMOOTHING
@@ -90,7 +90,7 @@ SMOOTH_WINDOW = 3
 # If the gimbal runs away when it sees the object, flip the relevant axis.
 # Press 'x' to flip pan direction, 'y' to flip tilt direction.
 PAN_INVERT  = 1     # 1 or -1
-TILT_INVERT = 1     # 1 or -1
+TILT_INVERT = -1    # 1 or -1
 
 # ---------------------------------------------------------------------------
 # PID PRESETS
@@ -248,6 +248,149 @@ def detect_object(frame, lower_hsv, upper_hsv):
     return (int(x), int(y), int(radius)), mask
 
 
+# --- PERSON DETECTION (multi-strategy) ---
+# Uses three detectors in priority order:
+#   1. Upper body cascade — works when camera sees torso and head
+#   2. Face cascade — works when only head/shoulders visible
+#   3. HOG full body — fallback when full body is in frame
+#
+# This handles the low-camera problem: HOG needs head-to-knees,
+# but from a table height you often only see torso-up.
+
+_upper_body = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_upperbody.xml"
+)
+_face = cv2.CascadeClassifier(
+    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+)
+_hog = cv2.HOGDescriptor()
+_hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+# Persistence filter: require CONFIRM_FRAMES consecutive detections
+# within CONFIRM_RADIUS pixels before accepting a new target.
+# Once confirmed, single-frame detections are accepted (for responsiveness).
+# Resets after LOST_FRAMES with no detection.
+CONFIRM_FRAMES = 3      # Frames needed to confirm a new detection
+CONFIRM_RADIUS = 80     # Max pixel distance to count as "same spot"
+LOST_FRAMES = 10        # Frames without detection before requiring re-confirm
+
+_confirm_buffer = []     # Recent unconfirmed detections
+_confirmed = False       # Whether we have a confirmed target
+_frames_since_detect = 0
+
+def _reset_persistence():
+    global _confirm_buffer, _confirmed, _frames_since_detect
+    _confirm_buffer = []
+    _confirmed = False
+    _frames_since_detect = 0
+
+def _check_persistence(detection):
+    """
+    Filter out transient false positives.
+    Returns detection if confirmed, None if still unconfirmed.
+    """
+    global _confirm_buffer, _confirmed, _frames_since_detect
+
+    if detection is None:
+        _frames_since_detect += 1
+        if _frames_since_detect > LOST_FRAMES:
+            _confirmed = False
+            _confirm_buffer = []
+        return None
+
+    _frames_since_detect = 0
+    cx, cy = detection[0], detection[1]
+
+    # Already tracking — accept immediately (person moves around)
+    if _confirmed:
+        return detection
+
+    # Not yet confirmed — check if this is consistent with recent detections
+    _confirm_buffer.append((cx, cy))
+    if len(_confirm_buffer) > CONFIRM_FRAMES:
+        _confirm_buffer.pop(0)
+
+    if len(_confirm_buffer) >= CONFIRM_FRAMES:
+        # Check all recent detections are near each other
+        avg_x = sum(p[0] for p in _confirm_buffer) / len(_confirm_buffer)
+        avg_y = sum(p[1] for p in _confirm_buffer) / len(_confirm_buffer)
+        all_close = all(
+            abs(p[0] - avg_x) < CONFIRM_RADIUS and abs(p[1] - avg_y) < CONFIRM_RADIUS
+            for p in _confirm_buffer
+        )
+        if all_close:
+            _confirmed = True
+            return detection
+
+    return None  # Not yet confirmed
+
+
+def detect_person(frame):
+    """
+    Detect a person using cascading strategies + persistence filter.
+    Returns same format as detect_object: (x, y, radius), mask_or_None
+    """
+    h, w = frame.shape[:2]
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    raw_detection = None
+
+    # --- Strategy 1: Upper body cascade ---
+    upper_rects = _upper_body.detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=5,        # was 3 — tighter to reduce false positives
+        minSize=(80, 80)       # was 60 — ignore small false matches
+    )
+    if len(upper_rects) > 0:
+        areas = [rw * rh for (_, _, rw, rh) in upper_rects]
+        best = upper_rects[areas.index(max(areas))]
+        rx, ry, rw, rh = best
+        cx = rx + rw // 2
+        cy = ry + rh // 2
+        radius = max(rw, rh) // 2
+        raw_detection = (cx, cy, radius)
+
+    # --- Strategy 2: Face cascade ---
+    if raw_detection is None:
+        face_rects = _face.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,    # was 4
+            minSize=(50, 50)   # was 40
+        )
+        if len(face_rects) > 0:
+            areas = [rw * rh for (_, _, rw, rh) in face_rects]
+            best = face_rects[areas.index(max(areas))]
+            rx, ry, rw, rh = best
+            cx = rx + rw // 2
+            cy = ry + rh // 2
+            radius = max(rw, rh) // 2
+            raw_detection = (cx, cy, radius)
+
+    # --- Strategy 3: HOG full body (fallback) ---
+    if raw_detection is None:
+        scale = 320.0 / w
+        small = cv2.resize(frame, (320, int(h * scale)))
+        rects, weights = _hog.detectMultiScale(
+            small, winStride=(8, 8), padding=(4, 4), scale=1.05
+        )
+        if len(rects) > 0:
+            best_idx = weights.argmax()
+            rx, ry, rw, rh = rects[best_idx]
+            rx = int(rx / scale)
+            ry = int(ry / scale)
+            rw = int(rw / scale)
+            rh = int(rh / scale)
+            cx = rx + rw // 2
+            cy = ry + int(rh * 0.35)
+            radius = max(rw, rh) // 2
+            raw_detection = (cx, cy, radius)
+
+    # --- Persistence filter ---
+    confirmed = _check_persistence(raw_detection)
+    return confirmed, None
+
+
 # ---------------------------------------------------------------------------
 # SERIAL CONNECTION
 # ---------------------------------------------------------------------------
@@ -298,10 +441,8 @@ class GimbalSerial:
             pass  # Skip this frame if write times out
 
     def home(self):
-        try:
-            self.ser.write(b"H\n")
-        except serial.SerialTimeoutException:
-            pass
+        """Move to configured home position (not firmware's hardcoded 90/90)."""
+        self.send_angles(SERVO_PAN_HOME, SERVO_TILT_HOME)
 
     def close(self):
         if self.ser and self.ser.is_open:
@@ -312,7 +453,7 @@ class GimbalSerial:
 # VISUALIZATION
 # ---------------------------------------------------------------------------
 def draw_overlay(frame, detection, kalman_pos, pan, tilt, pid_preset_name,
-                 pan_pid, tilt_pid, fps, tracking_active):
+                 pan_pid, tilt_pid, fps, tracking_active, detection_mode="color"):
     h, w = frame.shape[:2]
     cx, cy = w // 2, h // 2
 
@@ -353,6 +494,11 @@ def draw_overlay(frame, detection, kalman_pos, pan, tilt, pid_preset_name,
     cv2.putText(frame, f"FPS: {fps:.0f}", (10, 50),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
+    # Detection mode
+    mode_color = (200, 200, 0) if detection_mode == "color" else (0, 200, 200)
+    cv2.putText(frame, f"Mode: {detection_mode.upper()}", (10, 75),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, mode_color, 1)
+
     # Servo angles
     cv2.putText(frame, f"Pan: {pan:.0f}  Tilt: {tilt:.0f}",
                 (10, h - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
@@ -364,7 +510,7 @@ def draw_overlay(frame, detection, kalman_pos, pan, tilt, pid_preset_name,
                 (200, 200, 200), 1)
 
     # Controls hint
-    cv2.putText(frame, "q=quit h=home p=pause 1/2/3=PID +/-=P x/y=flip",
+    cv2.putText(frame, "q=quit h=home p=pause 1/2/3=PID +/-=P x/y=flip m=mode",
                 (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                 (120, 120, 120), 1)
 
@@ -449,9 +595,13 @@ def main():
 
     print("\nTracking started!")
     print("Controls: q=quit, h=home, p=pause, 1/2/3=PID preset, +/-=tune P")
-    print("          x=flip pan direction, y=flip tilt direction\n")
+    print("          x=flip pan direction, y=flip tilt direction")
+    print("          m=switch detection mode (color / person)\n")
 
     global PAN_INVERT, TILT_INVERT
+
+    # Detection mode: "color" (HSV) or "person" (HOG)
+    detection_mode = "color"
 
     while True:
         ret, frame = cap.read()
@@ -473,7 +623,10 @@ def main():
             lower_hsv, upper_hsv = read_trackbars("Calibration")
 
         # --- DETECT ---
-        detection, mask = detect_object(frame, lower_hsv, upper_hsv)
+        if detection_mode == "color":
+            detection, mask = detect_object(frame, lower_hsv, upper_hsv)
+        else:
+            detection, mask = detect_person(frame)
 
         # --- SMOOTH DETECTION ---
         # Rolling average of recent centroids to reduce jitter.
@@ -569,10 +722,11 @@ def main():
 
         # --- DRAW ---
         frame = draw_overlay(frame, detection, kalman_pos, pan_angle, tilt_angle,
-                            pid_name, pan_pid, tilt_pid, fps, tracking_active)
+                            pid_name, pan_pid, tilt_pid, fps, tracking_active,
+                            detection_mode)
 
         cv2.imshow("Gimbal Tracker", frame)
-        if calibrating:
+        if calibrating and mask is not None:
             cv2.imshow("Mask", mask)
 
         # --- KEY HANDLING ---
@@ -652,6 +806,15 @@ def main():
             TILT_INVERT *= -1
             tilt_pid.reset()
             print(f"Tilt direction flipped (now {'normal' if TILT_INVERT == 1 else 'inverted'})")
+
+        elif key == ord("m"):
+            detection_mode = "person" if detection_mode == "color" else "color"
+            smooth_buffer.clear()
+            pan_pid.reset()
+            tilt_pid.reset()
+            _reset_persistence()
+            print(f"Detection mode: {detection_mode.upper()}"
+                  f"{' (slower — ~10-15fps)' if detection_mode == 'person' else ''}")
 
     # Cleanup
     if gimbal:
